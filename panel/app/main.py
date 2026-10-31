@@ -975,6 +975,7 @@ async def settings_save(request: Request):
     changed, bad = st.opts.parse(dict(form))
     if bad:
         flash(request, t("Not saved, check: {items}", items=", ".join(t(b) for b in bad)), "error")
+        st.db.event("settings_rejected", {"fields": bad}, actor=actor(request), actor_ip=client_ip(request))
         return RedirectResponse("/settings", status_code=303)
     if changed:
         st.opts.set_many(changed, actor(request))
@@ -1003,8 +1004,11 @@ def settings_action(request: Request, action: str, csrf: str = Form(""), to: str
             notify.send_email(st.opts, directory.clean_email(to) or "", t("Test notification"),
                               t("Notifications from the Asterisk panel work."))
             flash(request, t("Test e-mail sent to {to}.", to=to))
-        except Exception as e:  # noqa: BLE001 — SMTP errors are shown to the administrator
-            flash(request, t("E-mail was not sent: {error}", error=str(e)[:300]), "error")
+        except Exception as e:  # noqa: BLE001 — SMTP errors are shown to the administrator and kept in the log
+            flash(request, t("E-mail was not sent: {error}", error=t(str(e))[:300]), "error")
+            st.db.event("settings_test_email_failed", {"to": to[:120], "error": str(e)[:300]}, actor=actor(request),
+                        actor_ip=client_ip(request))
+            return RedirectResponse("/settings", status_code=303)
     else:
         raise HTTPException(400)
     st.db.event("settings_" + action, actor=actor(request), actor_ip=client_ip(request))

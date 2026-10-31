@@ -21,6 +21,7 @@ import urllib.request
 from email.message import EmailMessage
 
 from . import fmt, i18n, phone
+from .fmt import N_
 from .i18n import t
 
 log = logging.getLogger("notify")
@@ -55,7 +56,7 @@ class Telegram:
 def send_email(opts, to: str, subject: str, body: str) -> None:
     o = opts.all()
     if not o["smtp_host"] or not o["smtp_from"]:
-        raise RuntimeError("SMTP is not configured")
+        raise RuntimeError(N_("SMTP is not configured: fill in the server and the sender address in Settings."))
     msg = EmailMessage()
     msg["From"], msg["To"], msg["Subject"] = o["smtp_from"], to, subject
     msg.set_content(body)

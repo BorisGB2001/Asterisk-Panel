@@ -36,10 +36,10 @@
         <label>{{ _(o.label) }}{% if o.apply == "restart" %} <span class="badge">{{ _("restart") }}</span>{% endif %}
           {% if o.kind == "choice" %}<select name="{{ o.key }}">{% for c in o.choices %}<option value="{{ c }}"{% if v == c %} selected{% endif %}>{{ c }}</option>{% endfor %}</select>
           {% elif o.kind == "list" %}<textarea name="{{ o.key }}" rows="3">{{ v|join("\n") }}</textarea>
-          {% elif o.kind == "secret" %}<input name="{{ o.key }}" type="password" placeholder="{{ _('set — leave empty to keep') if stored.get(o.key) else _('not set') }}" autocomplete="new-password">
+          {% elif o.kind == "secret" %}<input name="{{ o.key }}" type="{{ 'text' if o.key == 'tg_token' else 'password' }}" placeholder="{{ _('set — leave empty to keep') if stored.get(o.key) else _('not set') }}" autocomplete="off" data-1p-ignore data-lpignore="true" spellcheck="false">
             {% if stored.get(o.key) %}<span class="small"><label class="check"><input type="checkbox" name="{{ o.key }}__clear"> {{ _("clear") }}</label></span>{% endif %}
           {% elif o.kind == "int" %}<input name="{{ o.key }}" type="number" min="{{ o.lo }}" max="{{ o.hi }}" value="{{ v }}">
-          {% else %}<input name="{{ o.key }}" value="{{ v }}"{% if o.key == "panel_url" %} placeholder="{{ panel_url }}"{% endif %}>{% endif %}
+          {% else %}<input name="{{ o.key }}" value="{{ v }}" autocomplete="off"{% if o.key == "panel_url" %} placeholder="{{ panel_url }}"{% endif %}>{% endif %}
         </label>
         {% endif %}
         {% if o.help %}<p class="muted small opt-help">{{ _(o.help) }}</p>{% endif %}

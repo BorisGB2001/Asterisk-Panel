@@ -25,7 +25,9 @@ STATUS_NAMES = {"answered": N_("answered"), "missed": N_("missed"), "ivr": N_("l
 DIRECTION_NAMES = {"inbound": N_("inbound"), "internal": N_("internal")}
 DEVICE_LOG_NAMES = {"register": N_("registered"), "ip_change": N_("IP changed"), "unregister": N_("unregistered"),
                     "reachable": N_("reachable"), "unreachable": N_("unreachable"), "auth_failed": N_("failed sign-in")}
-EVENT_NAMES = {"admin_login": N_("panel sign-in"), "admin_login_failed": N_("failed panel sign-in"),
+EVENT_NAMES = {"settings_changed": N_("settings changed"), "settings_rejected": N_("settings not saved (invalid fields)"),
+               "settings_test_email": N_("test e-mail sent"), "settings_test_email_failed": N_("test e-mail failed"),
+               "admin_login": N_("panel sign-in"), "admin_login_failed": N_("failed panel sign-in"),
                "acct_create": N_("administrator added"), "acct_reset": N_("administrator password reset"),
                "acct_disable": N_("administrator disabled"), "acct_enable": N_("administrator enabled"),
                "acct_password": N_("password changed"), "acct_totp_bound": N_("authenticator set up"),
