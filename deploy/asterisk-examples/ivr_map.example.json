@@ -1,0 +1,98 @@
+{
+ "generated": "example",
+ "did": "74951234567",
+ "test_exten": "7410",
+ "exit_queue": "q1",
+ "nodes": {
+  "r": {
+   "title": "Выбор языка",
+   "title_en": "Language choice",
+   "sound": "welcome",
+   "timeout": 10,
+   "keys": {
+    "0": {
+     "type": "menu",
+     "target": "r0"
+    },
+    "9": {
+     "type": "menu",
+     "target": "r9"
+    }
+   }
+  },
+  "r0": {
+   "title": "Главное меню",
+   "title_en": "Main menu",
+   "sound": "r0",
+   "timeout": 10,
+   "keys": {
+    "#": {
+     "type": "repeat"
+    },
+    "1": {
+     "type": "queue",
+     "target": "q1"
+    },
+    "2": {
+     "type": "menu",
+     "target": "r02"
+    }
+   }
+  },
+  "r02": {
+   "title": "Справка",
+   "title_en": "Information",
+   "sound": "r02",
+   "timeout": 15,
+   "keys": {
+    "*": {
+     "type": "return"
+    },
+    "0": {
+     "type": "queue",
+     "target": "q1"
+    }
+   }
+  },
+  "r9": {
+   "title": "Main menu EN",
+   "title_en": "Main menu EN",
+   "sound": "r9",
+   "timeout": 10,
+   "keys": {
+    "0": {
+     "type": "queue",
+     "target": "q1"
+    }
+   }
+  }
+ },
+ "queues": {
+  "q1": {
+   "name": "Operators",
+   "number": "9001",
+   "strategy": "ringall",
+   "wait": 20,
+   "next": "q2",
+   "members": [
+    "1001",
+    "1002"
+   ]
+  },
+  "q2": {
+   "name": "Supervisors",
+   "number": "9002",
+   "strategy": "ringall",
+   "wait": 20,
+   "next": "q1",
+   "members": [
+    "1003"
+   ]
+  }
+ },
+ "users": {
+  "1001": "Operator 1",
+  "1002": "Operator 2",
+  "1003": "Supervisor"
+ }
+}

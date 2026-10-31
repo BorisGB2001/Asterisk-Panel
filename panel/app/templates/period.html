@@ -1,0 +1,14 @@
+{# period selector: keeps the other query parameters of the page #}
+<form method="get" class="row-form period">
+  {% for k, v in request.query_params.items() if k not in ("p", "from", "to", "page") %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <nav class="tabs">
+    {% for key, name in [("today", N_("today")), ("yesterday", N_("yesterday")), ("7d", N_("7 days")), ("30d", N_("30 days")), ("month", N_("this month")), ("prev", N_("last month"))] %}
+    <a href="?{{ qs(request, 'from,to,page', p=key) }}" class="{{ 'on' if period.key == key }}">{{ _(name) }}</a>
+    {% endfor %}
+  </nav>
+  <input type="hidden" name="p" value="custom">
+  <input type="date" name="from" value="{{ request.query_params.get('from', '') }}" aria-label="{{ _('from') }}">
+  <input type="date" name="to" value="{{ request.query_params.get('to', '') }}" aria-label="{{ _('to') }}">
+  <button type="submit" class="secondary small-btn">{{ _("Show") }}</button>
+  <span class="muted small">{{ period.label }}</span>
+</form>

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Log") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Panel log") }}</h1>
+  <nav class="tabs">{% for d in (1, 7, 30, 90) %}<a href="?days={{ d }}" class="{{ 'on' if days == d }}">{{ _("{n} d", n=d) }}</a>{% endfor %}</nav>
+</div>
+<section class="card">
+  <p class="muted small">{{ _("Sign-ins, account changes, played recordings and exports. Phone registrations are on the Phones page.") }}</p>
+  <div class="scroll"><table class="tbl">
+    <thead><tr><th>{{ _("Time") }}</th><th>{{ _("Event") }}</th><th>{{ _("Details") }}</th><th>{{ _("Who") }}</th><th>IP</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr{% if r.kind.endswith('failed') %} class="alert"{% endif %}><td class="nowrap small">{{ r.ts|dt }}</td><td>{{ event_name(r.kind) }}</td>
+        <td class="small">{% if r.detail %}{% if r.detail.get('linkedid') %}<a href="/call/{{ r.detail.linkedid }}">{{ r.detail.linkedid }}</a>{% else %}{% for k, v in r.detail.items() %}{{ k }}: {{ v }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}{% endif %}</td>
+        <td>{{ r.actor or "" }}</td><td><code>{{ r.actor_ip or "" }}</code></td></tr>
+    {% else %}<tr><td colspan="5" class="muted">{{ _("No events.") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Administrators") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Administrators") }}</h1></div>
+{% if new_pw %}
+<div class="flash flash-ok">{{ _("Temporary password for {name}:", name=new_pw.username) }} <code>{{ new_pw.password }}</code><br>
+  <span class="small">{{ _("Shown once. On the first sign-in the user sets up the authenticator and then a new password.") }}</span></div>
+{% endif %}
+<section class="card">
+  <table class="tbl">
+    <thead><tr><th>{{ _("User") }}</th><th>{{ _("Role") }}</th><th>{{ _("Authenticator") }}</th><th>{{ _("Last sign-in") }}</th><th></th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr{% if r.disabled %} class="off"{% endif %}><td>{{ r.username }}</td><td>{{ _(ROLE_NAMES.get(r.role, r.role)) }}</td>
+        <td>{{ _("set up") if r.totp_secret else _("not set up") }}</td>
+        <td class="small">{{ r.last_login_at|dt if r.last_login_at else "—" }} <code>{{ r.last_login_ip or "" }}</code></td>
+        <td>{% if r.id != admin.id %}
+          <form method="post" action="/admins/{{ r.id }}/reset" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Reset password") }}</button></form>
+          <form method="post" action="/admins/{{ r.id }}/{{ 'enable' if r.disabled else 'disable' }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Enable") if r.disabled else _("Disable") }}</button></form>
+        {% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  <form method="post" action="/admins/add" class="row-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="username" placeholder="{{ _('user name') }}" required maxlength="64">
+    <select name="role">{% for key, name in ROLE_NAMES.items() %}<option value="{{ key }}">{{ _(name) }}</option>{% endfor %}</select>
+    <button type="submit" class="small-btn">{{ _("Add") }}</button>
+  </form>
+</section>
+{% endblock %}

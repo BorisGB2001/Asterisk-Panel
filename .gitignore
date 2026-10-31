@@ -1,0 +1,7 @@
+__pycache__/
+.pytest_cache/
+.venv/
+.deploy-host
+.env
+secrets.env
+docs/_preview/

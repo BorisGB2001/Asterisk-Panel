@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "macros.html" import calls_table %}
+{% block title %}{{ ext }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ imap.user_title(ext) }}</h1><a href="/devices">← {{ _("all phones") }}</a></div>
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Registration") }}</h2>
+    {% if dev %}
+    <dl class="props">
+      <dt>{{ _("Status") }}</dt><dd>{{ dev.status }}</dd>
+      <dt>IP</dt><dd><code>{{ dev.ip }}:{{ dev.port }}</code></dd>
+      <dt>{{ _("Country / city") }}</dt><dd>{{ dev.country|flag }} {{ dev.country|country if dev.country else _("local network") }}{% if dev.city %} · {{ dev.city }}{% endif %}</dd>
+      {% if dev.org %}<dt>{{ _("Provider") }}</dt><dd>{{ dev.org }}</dd>{% endif %}
+      <dt>{{ _("Phone app") }}</dt><dd>{{ dev.user_agent or "—" }}</dd>
+      <dt>RTT</dt><dd>{{ "%.0f ms"|format(dev.rtt_ms) if dev.rtt_ms else "—" }}</dd>
+      <dt>{{ _("Registered since") }}</dt><dd>{{ dev.registered_at|dt if dev.registered_at else "—" }}</dd>
+      <dt>{{ _("First seen") }}</dt><dd>{{ dev.first_seen|dt }}</dd>
+      <dt>{{ _("Groups") }}</dt><dd>{% for qn, info in imap.queues.items() if ext in info.members %}{{ info.name }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</dd>
+    </dl>
+    {% else %}<p class="muted">{{ _("This phone has never registered.") }}</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>{{ _("Addresses it connected from") }}</h2>
+    <table class="tbl"><thead><tr><th>IP</th><th>{{ _("Country / city") }}</th><th>{{ _("First") }}</th><th>{{ _("Last") }}</th></tr></thead>
+      <tbody>{% for r in ips %}<tr><td><code>{{ r.ip }}</code><div class="muted small">{{ r.org or "" }}</div></td><td>{{ r.cc|flag }} {{ r.cc|country if r.cc else _("local network") }}{% if r.city %} · {{ r.city }}{% endif %}</td>
+        <td class="small nowrap">{{ r.first|dt("%d.%m.%y %H:%M") }}</td><td class="small nowrap">{{ r.last|dt("%d.%m.%y %H:%M") }}</td></tr>
+      {% else %}<tr><td colspan="4" class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+</div>
+
+<section class="card">
+  <div class="head"><h2>{{ _("Calls") }}</h2>{% include "period.html" %}</div>
+  {{ calls_table(calls_rows) }}
+</section>
+
+<section class="card">
+  <h2>{{ _("Registration log") }}</h2>
+  {% include "device_log.html" %}
+</section>
+{% endblock %}

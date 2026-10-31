@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Phones") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Phones") }}</h1>
+  <nav class="tabs">{% for d in (1, 7, 30, 90) %}<a href="?days={{ d }}" class="{{ 'on' if days == d }}">{{ _("{n} d", n=d) }}</a>{% endfor %}</nav>
+</div>
+{% if not ami_ok %}<p class="warn">{{ _("No connection to Asterisk (AMI): registrations are not updated.") }}</p>{% endif %}
+
+<section class="card">
+  <div class="scroll"><table class="tbl sortable">
+    <thead><tr><th>{{ _("Extension") }}</th><th>{{ _("Status") }}</th><th>{{ _("Registered from") }}</th><th>{{ _("Country / city") }}</th><th>{{ _("Provider") }}</th><th>{{ _("Phone app") }}</th><th class="num">RTT</th><th>{{ _("Since") }}</th></tr></thead>
+    <tbody>{% for r in rows %}{% set d = r.dev %}
+      <tr{% if not d or d.status == 'Removed' %} class="off"{% endif %}>
+        <td><a href="/device/{{ r.ext }}">{{ r.ext }}</a> <span class="muted small">{{ r.name }}</span></td>
+        <td>{% if d and d.status not in ('Removed',) %}<span class="st {{ 'st-answered' if d.status in ('Reachable', 'NonQualified', 'Created', 'Updated') else 'st-missed' }}">{{ d.status }}</span>{% else %}<span class="st">{{ _("offline") }}</span>{% endif %}</td>
+        <td>{% if d and d.ip %}<code>{{ d.ip }}:{{ d.port }}</code>{% endif %}</td>
+        <td>{% if d and d.country %}{{ d.country|flag }} {{ d.country|country }}{% if d.city %} · {{ d.city }}{% endif %}{% elif d and d.ip %}<span class="muted">{{ _("local network") }}</span>{% endif %}</td>
+        <td class="small">{{ d.org if d and d.org else "" }}</td>
+        <td class="small">{{ d.user_agent if d and d.user_agent else "" }}</td>
+        <td class="num">{{ "%.0f ms"|format(d.rtt_ms) if d and d.rtt_ms else "" }}</td>
+        <td class="small nowrap">{{ d.registered_at|dt("%d.%m %H:%M") if d and d.registered_at else "" }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Registrations by country") }}</h2>
+    <table class="tbl"><tbody>{% for r in countries %}<tr><td>{{ r.cc|flag }} {{ r.cc|country if r.cc else _("local network") }}</td><td class="num">{{ r.phones }} {{ _("phones") }}</td><td class="num">{{ r.events }}</td></tr>
+      {% else %}<tr><td class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+  <section class="card">
+    <h2>{{ _("Failed sign-ins (password guessing)") }}</h2>
+    <table class="tbl"><thead><tr><th>IP</th><th>{{ _("Country") }}</th><th>{{ _("Accounts tried") }}</th><th class="num">{{ _("Attempts") }}</th><th>{{ _("Last") }}</th></tr></thead>
+      <tbody>{% for r in fails %}<tr><td><code>{{ r.ip }}</code><div class="muted small">{{ r.org }}</div></td><td>{{ r.cc|flag }} {{ r.cc|country if r.cc else "" }}</td>
+        <td class="small">{{ (r.accounts or [])[:5]|join(", ") }}{% if (r.accounts or [])|length > 5 %} …{% endif %}</td><td class="num">{{ r.n }}</td><td class="small nowrap">{{ r.last|dt("%d.%m %H:%M") }}</td></tr>
+      {% else %}<tr><td colspan="5" class="muted">{{ _("None.") }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+</div>
+
+<section class="card">
+  <h2>{{ _("Registration log") }}</h2>
+  {% include "device_log.html" %}
+</section>
+{% endblock %}

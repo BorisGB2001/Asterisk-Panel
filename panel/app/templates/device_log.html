@@ -1,0 +1,11 @@
+<div class="scroll"><table class="tbl">
+  <thead><tr><th>{{ _("Time") }}</th><th>{{ _("Extension") }}</th><th>{{ _("Event") }}</th><th>IP</th><th>{{ _("Country / city") }}</th><th>{{ _("Phone app") }}</th></tr></thead>
+  <tbody>{% for r in log %}
+    <tr{% if r.kind == 'auth_failed' %} class="alert"{% endif %}><td class="nowrap small">{{ r.ts|dt }}</td>
+      <td>{% if r.endpoint %}<a href="/device/{{ r.endpoint }}">{{ r.endpoint }}</a>{% endif %}</td>
+      <td>{{ _(DEVICE_LOG_NAMES.get(r.kind, r.kind)) }}{% if r.detail and r.detail.get('from') %} <span class="muted small">{{ _("from") }} {{ r.detail['from'] }}</span>{% endif %}{% if r.detail and r.detail.get('event') %} <span class="muted small">{{ r.detail['event'] }}</span>{% endif %}</td>
+      <td>{% if r.ip %}<code>{{ r.ip }}{% if r.port %}:{{ r.port }}{% endif %}</code>{% endif %}</td>
+      <td>{{ r.country|flag }} {{ r.country|country if r.country else "" }}{% if r.city %} · {{ r.city }}{% endif %}{% if r.org %} <span class="muted small">{{ r.org }}</span>{% endif %}</td>
+      <td class="small">{{ r.user_agent or "" }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">{{ _("No events.") }}</td></tr>{% endfor %}</tbody>
+</table></div>

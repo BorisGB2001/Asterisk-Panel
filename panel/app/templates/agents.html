@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Operators") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Operators") }}</h1>{% include "period.html" %}</div>
+<section class="card">
+  <p class="muted small">{{ _("Offered — how many times the phone rang for a group call; direct — internal calls answered without a group.") }}</p>
+  <div class="scroll"><table class="tbl sortable">
+    <thead><tr><th>{{ _("Operator") }}</th><th>{{ _("Groups") }}</th><th>{{ _("Phone") }}</th><th class="num">{{ _("Offered") }}</th><th class="num">{{ _("Answered") }}</th>
+      <th class="num">{{ _("Did not answer") }}</th><th class="num">{{ _("Answer rate") }}</th><th class="num">{{ _("Direct") }}</th><th class="num">{{ _("Avg talk") }}</th><th class="num">{{ _("Talk time") }}</th></tr></thead>
+    <tbody>{% for r in rows %}{% set d = devs.get(r.ext) %}
+      <tr><td><a href="/device/{{ r.ext }}">{{ imap.user_title(r.ext) }}</a></td>
+        <td class="small">{% for q in member_of.get(r.ext, []) %}{{ imap.queue_title(q) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td>{% if d and d.status != 'Removed' %}<span class="st st-answered" title="{{ d.ip }} {{ d.user_agent }}">{{ _("online") }}</span>{% else %}<span class="st">{{ _("offline") }}</span>{% endif %}</td>
+        <td class="num">{{ r.offered }}</td><td class="num"><a href="/calls?{{ qs(request, agent=r.ext) }}">{{ r.answered }}</a></td><td class="num">{{ r.missed }}</td>
+        <td class="num">{{ pct(r.answered, r.offered) }}</td><td class="num">{{ r.get('direct', 0) }}</td>
+        <td class="num" data-v="{{ r.avg_talk }}">{{ r.avg_talk|hms }}</td><td class="num" data-v="{{ r.talk + r.get('direct_talk', 0) }}">{{ (r.talk + r.get('direct_talk', 0))|hours }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="{{ lang }}"{% if theme in ("light", "dark") %} data-theme="{{ theme }}"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}{{ _("Asterisk panel") }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css?v={{ VERSION }}">
+  <script src="/static/app.js?v={{ VERSION }}" defer></script>
+</head>
+<body>
+  {% if user %}
+  <header class="top">
+    <a class="brand" href="/">{{ _("Asterisk panel") }}</a>
+    <nav class="menu">
+      {% for href, title, prefixes in MENU + ([("/admins", N_("Administrators"), ())] if admin and admin.role == "super" else []) %}
+      <a href="{{ href }}"{% if path == href or (prefixes and path.startswith(prefixes)) %} class="on" aria-current="page"{% endif %}>{{ _(title) }}</a>
+      {% endfor %}
+    </nav>
+    {% include "theme.html" %}
+    {% include "lang.html" %}
+    <form method="post" action="/logout" class="logout">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <a href="/account" class="muted" title="{{ _("My account") }}">{{ user }}</a>
+      <button type="submit" class="link">{{ _("Sign out") }}</button>
+    </form>
+  </header>
+  {% endif %}
+  <main>
+    {% if not user %}<div class="lang-corner">{% include "theme.html" %}{% include "lang.html" %}</div>{% endif %}
+    {% if flash %}<div class="flash flash-{{ flash.kind }}">{{ flash.text }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    <span>Asterisk-Panel v{{ VERSION }}</span>
+    <span>{{ _("IP geolocation") }}: <a href="https://db-ip.com" rel="noopener noreferrer" target="_blank">DB-IP</a>{% if GEO_DATE() %} · {{ GEO_DATE() }}{% endif %}</span>
+    <span>{{ _("Phone numbers") }}: <a href="https://github.com/google/libphonenumber" rel="noopener noreferrer" target="_blank">libphonenumber</a></span>
+  </footer>
+</body>
+</html>

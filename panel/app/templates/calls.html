@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros.html" import calls_table %}
+{% block title %}{{ _("Calls") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Calls") }}</h1>{% include "period.html" %}</div>
+
+<form method="get" class="row-form filters">
+  {% for k in ("p", "from", "to") %}{% if request.query_params.get(k) %}<input type="hidden" name="{{ k }}" value="{{ request.query_params.get(k) }}">{% endif %}{% endfor %}
+  <input type="search" name="q" value="{{ filters.get('q', '') }}" placeholder="{{ _('number, name or call id') }}">
+  <select name="status" data-autosubmit>
+    <option value="">{{ _("any result") }}</option>
+    {% for key, name in STATUS_NAMES.items() %}<option value="{{ key }}"{% if filters.get('status') == key %} selected{% endif %}>{{ _(name) }}</option>{% endfor %}
+  </select>
+  <select name="direction" data-autosubmit>
+    <option value="">{{ _("any direction") }}</option>
+    {% for key, name in DIRECTION_NAMES.items() %}<option value="{{ key }}"{% if filters.get('direction') == key %} selected{% endif %}>{{ _(name) }}</option>{% endfor %}
+  </select>
+  <select name="queue" data-autosubmit>
+    <option value="">{{ _("any group") }}</option>
+    {% for key, info in imap.queues.items() %}<option value="{{ key }}"{% if filters.get('queue') == key %} selected{% endif %}>{{ info.name }}</option>{% endfor %}
+  </select>
+  <select name="country" data-autosubmit>
+    <option value="">{{ _("any country") }}</option>
+    {% for r in countries %}<option value="{{ r.cc }}"{% if filters.get('country') == r.cc %} selected{% endif %}>{{ r.cc|flag }} {{ r.cc|country }} ({{ r.calls }})</option>{% endfor %}
+  </select>
+  <select name="lang" data-autosubmit>
+    <option value="">{{ _("any language") }}</option>
+    {% for key in ("ru", "en") %}<option value="{{ key }}"{% if filters.get('lang') == key %} selected{% endif %}>{{ key|upper }}</option>{% endfor %}
+  </select>
+  {% for k in ("agent", "node") %}{% if filters.get(k) %}<input type="hidden" name="{{ k }}" value="{{ filters[k] }}">{% endif %}{% endfor %}
+  <button type="submit" class="small-btn">{{ _("Find") }}</button>
+  <a href="/calls?{{ qs(request, 'status,direction,queue,country,lang,agent,node,q,page') }}" class="small">{{ _("reset") }}</a>
+  <a href="/calls.csv?{{ qs(request, 'page') }}" class="small push">CSV</a>
+</form>
+{% if filters.get('agent') %}<p class="small muted">{{ _("Answered by") }}: {{ imap.user_title(filters.agent) }}</p>{% endif %}
+{% if filters.get('node') %}<p class="small muted">{{ _("Passed IVR menu") }}: {{ imap.node_title(filters.node) }}</p>{% endif %}
+
+<section class="card">
+  <p class="muted small">{{ _("Found") }}: {{ total }}</p>
+  {{ calls_table(rows) }}
+  {% if pages > 1 %}
+  <nav class="tabs pager">
+    {% for n in range(1, pages + 1) %}{% if n <= 3 or n > pages - 2 or (n - page)|abs <= 2 %}
+    <a href="/calls?{{ qs(request, page=n) }}" class="{{ 'on' if n == page }}">{{ n }}</a>
+    {% elif n == 4 or n == pages - 2 %}<span class="muted">…</span>{% endif %}{% endfor %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

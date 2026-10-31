@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}IVR — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>IVR</h1>{% include "period.html" %}</div>
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Most visited menus") }}</h2>
+    {{ chart|safe }}
+  </section>
+  <section class="card">
+    <h2>{{ _("Language choice") }}</h2>
+    <table class="tbl">
+      <tbody>{% for r in langs %}<tr><td>{{ r.lang|upper if r.lang else _("no choice (hung up or timeout)") }}</td><td class="num">{% if r.lang %}<a href="/calls?{{ qs(request, lang=r.lang) }}">{{ r.n }}</a>{% else %}{{ r.n }}{% endif %}</td></tr>
+      {% else %}<tr><td class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+</div>
+
+<section class="card">
+  <h2>{{ _("Menu tree") }}</h2>
+  <p class="muted small">{{ _("Visits — calls that reached the menu; hung up here — the caller left the call in this menu; keys — how many times each key was pressed.") }}</p>
+  <div class="scroll"><table class="tbl ivr-tree">
+    <thead><tr><th>{{ _("Menu") }}</th><th class="num">{{ _("Visits") }}</th><th class="num">{{ _("Hung up here") }}</th><th class="num">{{ _("No key (timeout)") }}</th><th>{{ _("Keys") }}</th></tr></thead>
+    <tbody>{% for n in tree %}
+      <tr><td><span class="indent i{{ n.depth }}"></span><a href="/calls?{{ qs(request, node=n.path) }}">{{ imap.node_title(n.path) }}</a> <code class="muted small">{{ n.path }}</code>
+          <div class="muted small">{{ _("record") }} {{ n.info.sound }} · {{ _("wait") }} {{ n.info.timeout }} s</div></td>
+        <td class="num">{{ n.visits }}</td><td class="num">{{ n.hung_up }}</td><td class="num">{{ n.timeouts }}</td>
+        <td class="small">{% for k, a, cnt in n.key_rows %}<span class="kp"><code>{{ k }}</code> {{ imap.key_text(n.path, k) }} <b>{{ cnt }}</b></span>{% endfor %}</td></tr>
+    {% else %}<tr><td colspan="5" class="muted">{{ _("IVR map not found") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

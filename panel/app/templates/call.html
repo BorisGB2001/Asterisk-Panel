@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "macros.html" import st, who_called %}
+{% block title %}{{ _("Call") }} {{ c.caller_num }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>{{ _("Call") }} {{ c.start_at|dt }}</h1>
+  {{ st(c.status) }}
+  {% if c.in_progress %}<span class="st st-live">{{ _("in progress") }}</span>{% endif %}
+  <a href="/calls">← {{ _("all calls") }}</a>
+</div>
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Who called") }}</h2>
+    <dl class="props">
+      <dt>{{ _("Number") }}</dt><dd>{{ who_called(c) }}{% if c.caller_e164 %} <span class="muted small">{{ pretty(c.caller_e164) }}</span>{% endif %}</dd>
+      <dt>{{ _("Country") }}</dt><dd>{{ c.caller_country|flag }} {{ c.caller_country|country }}{% if c.caller_region %} · {{ c.caller_region }}{% endif %}</dd>
+      {% if c.caller_carrier %}<dt>{{ _("Carrier") }}</dt><dd>{{ c.caller_carrier }}</dd>{% endif %}
+      <dt>{{ _("Came via") }}</dt><dd>{% if c.source == 'trunk' %}{{ _("SIP trunk") }}{% elif c.source == 'local' %}{{ _("test call (Local channel)") }}{% else %}{{ _("phone") }} <a href="/device/{{ c.source }}">{{ imap.user_title(c.source) }}</a>{% endif %}</dd>
+      {% if c.device_ip %}<dt>{{ _("Phone registered from") }}</dt><dd><code>{{ c.device_ip }}</code> {{ c.device_country|flag }} {{ c.device_country|country if c.device_country else "" }}</dd>{% endif %}
+      <dt>{{ _("Number dialled") }}</dt><dd>{{ c.did or c.dst or "—" }}</dd>
+      <dt>{{ _("Direction") }}</dt><dd>{{ _(DIRECTION_NAMES.get(c.direction, c.direction)) }}{% if c.lang %} · {{ _("IVR language") }}: {{ c.lang|upper }}{% endif %}</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>{{ _("Result") }}</h2>
+    <dl class="props">
+      <dt>{{ _("Start") }}</dt><dd>{{ c.start_at|dt }}</dd>
+      <dt>{{ _("End") }}</dt><dd>{{ c.end_at|dt if c.end_at else "—" }}</dd>
+      <dt>{{ _("Total") }}</dt><dd>{{ c.total_sec|hms }}</dd>
+      {% if c.ivr_sec %}<dt>{{ _("In IVR") }}</dt><dd>{{ c.ivr_sec|hms }}</dd>{% endif %}
+      {% if c.queues %}<dt>{{ _("Groups") }}</dt><dd>{% for q in c.queues %}<a href="/queues?q={{ q }}">{{ imap.queue_title(q) }}</a>{% if not loop.last %} → {% endif %}{% endfor %}</dd>
+      <dt>{{ _("Waited for operator") }}</dt><dd>{{ c.wait_sec|hms }}{% if c.rings %} · {{ _("unanswered rings") }}: {{ c.rings }}{% endif %}</dd>{% endif %}
+      {% if c.answered_by %}<dt>{{ _("Answered by") }}</dt><dd><a href="/device/{{ c.answered_by }}">{{ imap.user_title(c.answered_by) }}</a>{% if c.answered_queue %} · {{ imap.queue_title(c.answered_queue) }}{% endif %}</dd>
+      <dt>{{ _("Talk") }}</dt><dd>{{ c.talk_sec|hms }}</dd>{% endif %}
+      <dt>{{ _("Call id") }}</dt><dd><code class="small">{{ c.linkedid }}</code></dd>
+    </dl>
+    {% if has_rec %}
+    <h2>{{ _("Recording") }}</h2>
+    <audio controls preload="none" src="/call/{{ c.linkedid }}/recording" class="player"></audio>
+    <p class="small"><a href="/call/{{ c.linkedid }}/recording?download=1">{{ _("download") }}</a></p>
+    {% elif c.recording %}<p class="muted small">{{ _("Recording file not found") }}: {{ c.recording }}</p>{% endif %}
+  </section>
+</div>
+
+{% if c.ivr_path %}
+<section class="card">
+  <h2>{{ _("Path through the IVR") }}</h2>
+  <p class="path big">{% for n in c.ivr_path %}<a class="node" href="/calls?node={{ n }}">{{ imap.node_title(n) }}</a>{% if not loop.last %} › {% endif %}{% endfor %}
+    {% if c.queues %} › <b>{{ imap.queue_title(c.queues[-1]) }}</b>{% endif %}</p>
+  {% if c.ivr_keys %}<p class="small muted">{{ _("Keys") }}: {% for k in c.ivr_keys %}<code>{{ k.split(':')[1:]|join(':') }}</code> {% endfor %}</p>{% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>{{ _("Step by step") }}</h2>
+  <ol class="timeline">
+    {% for s in steps %}
+    <li class="tl tl-{{ s.kind.split('-')[0] }}">
+      <span class="tl-time" title="{{ s.ts|dt }}">+{{ s.rel|hms }}</span>
+      <span class="tl-text">{{ s.text }}{% if s.who %} <b>{{ s.who }}</b>{% endif %}</span>
+      {% if s.note %}<span class="tl-note muted small">{{ s.note }}</span>{% endif %}
+    </li>
+    {% else %}<li class="muted">{{ _("No events for this call.") }}</li>{% endfor %}
+  </ol>
+</section>
+
+<details class="card">
+  <summary>{{ _("Call log (raw Asterisk events)") }}: CEL {{ cel|length }}, queue_log {{ qlog|length }}, CDR {{ cdr|length }}</summary>
+  <h2>CEL</h2>
+  <div class="scroll"><table class="tbl mono">
+    <thead><tr><th>{{ _("Time") }}</th><th>event</th><th>channel</th><th>context / exten</th><th>app</th><th>cid</th><th>extra</th></tr></thead>
+    <tbody>{% for r in cel %}<tr><td class="nowrap">{{ r.eventtime|dt("%H:%M:%S") }}.{{ "%03d"|format(r.eventtime.microsecond // 1000) }}</td>
+      <td>{{ r.eventtype }}{% if r.userdeftype %} <b>{{ r.userdeftype }}</b>{% endif %}</td><td>{{ r.channame }}</td>
+      <td>{{ r.context }} / {{ r.exten }}</td><td>{{ r.appname }}{% if r.appdata %}({{ r.appdata }}){% endif %}</td>
+      <td>{{ r.cid_num }}</td><td class="wrap">{{ r.extra }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if qlog %}<h2>queue_log</h2>
+  <div class="scroll"><table class="tbl mono">
+    <thead><tr><th>{{ _("Time") }}</th><th>queue</th><th>agent</th><th>event</th><th>data1…5</th></tr></thead>
+    <tbody>{% for r in qlog %}<tr><td class="nowrap">{{ r.time|dt("%H:%M:%S") }}</td><td>{{ r.queuename }}</td><td>{{ r.agent }}</td><td>{{ r.event }}</td>
+      <td>{{ [r.data1, r.data2, r.data3, r.data4, r.data5]|select|join(" | ") }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% endif %}
+  {% if cdr %}<h2>CDR</h2>
+  <div class="scroll"><table class="tbl mono">
+    <thead><tr><th>start</th><th>src → dst</th><th>channel → dstchannel</th><th>lastapp</th><th>disposition</th><th class="num">duration / billsec</th></tr></thead>
+    <tbody>{% for r in cdr %}<tr><td class="nowrap">{{ r.start|dt("%H:%M:%S") }}</td><td>{{ r.src }} → {{ r.dst }} ({{ r.dcontext }})</td>
+      <td>{{ r.channel }} → {{ r.dstchannel }}</td><td>{{ r.lastapp }}({{ r.lastdata }})</td><td>{{ r.disposition }}</td>
+      <td class="num">{{ r.duration }} / {{ r.billsec }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% endif %}
+</details>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Countries") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Countries") }}</h1>{% include "period.html" %}</div>
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Where calls come from (caller number)") }}</h2>
+    {{ chart|safe }}
+  </section>
+  <section class="card">
+    <h2>{{ _("Where phones are registered from (calls of internal phones)") }}</h2>
+    <table class="tbl">
+      <thead><tr><th>{{ _("Country") }}</th><th class="num">{{ _("Calls") }}</th><th class="num">{{ _("Phones") }}</th></tr></thead>
+      <tbody>{% for r in devices %}<tr><td>{{ r.cc|flag }} {{ r.cc|country if r.cc else _("local network") }}</td><td class="num">{{ r.calls }}</td><td class="num">{{ r.phones }}</td></tr>
+      {% else %}<tr><td colspan="3" class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <p class="small"><a href="/devices">{{ _("Phones and registrations") }} →</a></p>
+  </section>
+</div>
+
+<section class="card">
+  <div class="scroll"><table class="tbl sortable">
+    <thead><tr><th>{{ _("Country") }}</th><th class="num">{{ _("Calls") }}</th><th class="num">{{ _("Callers") }}</th><th class="num">{{ _("Answered") }}</th>
+      <th class="num">{{ _("Missed") }}</th><th class="num">{{ _("Left in IVR") }}</th><th class="num">{{ _("Answer rate") }}</th><th class="num">{{ _("Avg wait") }}</th><th class="num">{{ _("Talk time") }}</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr{% if r.cc == cc %} class="sel"{% endif %}><td><a href="/countries?{{ qs(request, cc=r.cc) }}">{{ r.cc|flag }} {{ r.cc|country }}</a></td>
+        <td class="num"><a href="/calls?{{ qs(request, 'cc', country=r.cc) }}">{{ r.calls }}</a></td><td class="num">{{ r.callers }}</td>
+        <td class="num">{{ r.answered }}</td><td class="num">{{ r.missed }}</td><td class="num">{{ r.ivr }}</td>
+        <td class="num">{{ pct(r.answered, r.calls) }}</td><td class="num" data-v="{{ r.avg_wait }}">{{ r.avg_wait|hms }}</td><td class="num" data-v="{{ r.talk }}">{{ r.talk|hours }}</td></tr>
+    {% else %}<tr><td colspan="9" class="muted">{{ _("No calls in this period.") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+{% if cc %}
+<section class="card">
+  <h2>{{ cc|flag }} {{ cc|country }}: {{ _("regions and carriers") }}</h2>
+  <table class="tbl sortable">
+    <thead><tr><th>{{ _("Region") }}</th><th>{{ _("Carrier") }}</th><th class="num">{{ _("Calls") }}</th><th class="num">{{ _("Answered") }}</th><th class="num">{{ _("Missed") }}</th></tr></thead>
+    <tbody>{% for r in regions %}<tr><td>{{ r.region or "—" }}</td><td>{{ r.carrier or "—" }}</td><td class="num">{{ r.calls }}</td><td class="num">{{ r.answered }}</td><td class="num">{{ r.missed }}</td></tr>
+    {% else %}<tr><td colspan="5" class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

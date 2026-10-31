@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Groups") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Groups (queues)") }}</h1>{% include "period.html" %}</div>
+
+<section class="card">
+  <p class="muted small">{{ _("One call can pass several groups: if nobody answers in time it goes to the next group. SLA — answered within {n} s.", n=sla) }}</p>
+  <div class="scroll"><table class="tbl sortable">
+    <thead><tr><th>{{ _("Group") }}</th><th>{{ _("Number") }}</th><th>{{ _("Strategy") }}</th><th class="num">{{ _("Entered") }}</th><th class="num">{{ _("Answered") }}</th>
+      <th class="num">SLA</th><th class="num">{{ _("Passed on") }}</th><th class="num">{{ _("Abandoned") }}</th><th class="num">{{ _("Unanswered rings") }}</th>
+      <th class="num">{{ _("Avg wait") }}</th><th class="num">{{ _("Max wait") }}</th><th class="num">{{ _("Avg abandon wait") }}</th><th class="num">{{ _("Avg talk") }}</th><th class="num">{{ _("Talk time") }}</th></tr></thead>
+    <tbody>{% for r in rows %}{% set info = imap.queues.get(r.q, {}) %}
+      <tr{% if r.q == q %} class="sel"{% endif %}><td><a href="/queues?{{ qs(request, q=r.q) }}">{{ imap.queue_title(r.q) }}</a></td>
+        <td>{{ info.get('number', '') }}</td>
+        <td class="small">{{ info.get('strategy', '') }}{% if info.get('wait') %} · {{ info.wait }} s → {{ imap.queue_title(info.next) if info.next != r.q else _("waits") }}{% endif %}</td>
+        <td class="num"><a href="/calls?{{ qs(request, 'q', queue=r.q) }}">{{ r.entered }}</a></td><td class="num">{{ r.answered }}</td>
+        <td class="num">{{ pct(r.in_sla, r.answered) }}</td><td class="num">{{ r.passed_on }}</td><td class="num">{{ r.abandoned }}</td><td class="num">{{ r.no_answer }}</td>
+        <td class="num" data-v="{{ r.avg_wait }}">{{ r.avg_wait|hms }}</td><td class="num" data-v="{{ r.max_wait_answered }}">{{ r.max_wait_answered|hms }}</td>
+        <td class="num" data-v="{{ r.avg_abandon_wait }}">{{ r.avg_abandon_wait|hms }}</td><td class="num" data-v="{{ r.avg_talk }}">{{ r.avg_talk|hms }}</td>
+        <td class="num" data-v="{{ r.sum_talk }}">{{ r.sum_talk|hours }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+
+{% if q %}
+<section class="card">
+  <h2>{{ imap.queue_title(q) }}: {{ _("operators") }}</h2>
+  {% set members = imap.queues.get(q, {}).get('members', []) %}
+  {% if members %}<p class="small muted">{{ _("Members") }}: {% for m in members %}<a href="/device/{{ m }}">{{ imap.user_title(m) }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+  {% include "agents_table.html" %}
+</section>
+{% endif %}
+{% endblock %}

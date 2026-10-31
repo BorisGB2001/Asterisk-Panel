@@ -1,0 +1,24 @@
+# boris.gb 2026-10-31 15:05 - Asterisk-Panel web app (FastAPI/uvicorn on 127.0.0.1:8080, Caddy in front on PANEL_PORT)
+[Unit]
+Description=Asterisk-Panel
+After=network-online.target postgresql.service asterisk.service
+Wants=network-online.target
+
+[Service]
+User=astpanel
+Group=astpanel
+SupplementaryGroups=asterisk
+WorkingDirectory=/opt/asterisk-panel/panel
+EnvironmentFile=/opt/asterisk-panel/.env
+ExecStart=/opt/asterisk-panel/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8080 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header --log-level warning
+Restart=always
+RestartSec=3
+# hardening: read-only system, writes only to the data directory; recordings and the IVR map are read-only
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/opt/asterisk-panel/data
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+<div class="scroll"><table class="tbl sortable">
+  <thead><tr><th>{{ _("Operator") }}</th><th class="num">{{ _("Offered") }}</th><th class="num">{{ _("Answered") }}</th><th class="num">{{ _("Did not answer") }}</th>
+    <th class="num">{{ _("Answer rate") }}</th><th class="num">{{ _("Avg ring before answer") }}</th><th class="num">{{ _("Avg talk") }}</th><th class="num">{{ _("Talk time") }}</th></tr></thead>
+  <tbody>{% for r in agents %}{% set ext = imap.ext_by_name(r.agent) %}
+    <tr><td>{% if ext %}<a href="/device/{{ ext }}">{{ imap.user_title(ext) }}</a>{% else %}{{ r.agent }}{% endif %}</td>
+      <td class="num">{{ r.offered }}</td><td class="num"><a href="/calls?{{ qs(request, 'q', agent=ext or r.agent) }}">{{ r.answered }}</a></td><td class="num">{{ r.missed }}</td>
+      <td class="num">{{ pct(r.answered, r.offered) }}</td><td class="num">{{ r.avg_ring|hms }}</td><td class="num" data-v="{{ r.avg_talk }}">{{ r.avg_talk|hms }}</td><td class="num" data-v="{{ r.talk }}">{{ r.talk|hours }}</td></tr>
+  {% else %}<tr><td colspan="8" class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody>
+</table></div>

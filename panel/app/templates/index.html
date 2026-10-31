@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "macros.html" import calls_table %}
+{% block content %}
+<div class="head"><h1>{{ _("Overview") }}</h1>{% include "period.html" %}</div>
+
+<div class="kpis compact" data-refresh="60">
+  <a class="card kpi" href="/calls?{{ qs(request) }}"><div class="muted small">{{ _("Calls") }}</div><b>{{ k.total }}</b>
+    <div class="small muted">{{ _("inbound") }} {{ k.inbound }} · {{ _("callers") }} {{ k.callers }}</div></a>
+  <a class="card kpi" href="/calls?{{ qs(request, status='answered') }}"><div class="muted small">{{ _("Answered") }}</div><b>{{ k.answered }}</b>
+    <div class="small muted">{{ pct(k.answered, k.total) }}</div></a>
+  <a class="card kpi" href="/calls?{{ qs(request, status='missed') }}"><div class="muted small">{{ _("Missed in queue") }}</div><b class="{{ 'bad' if k.missed }}">{{ k.missed }}</b>
+    <div class="small muted">{{ pct(k.missed, k.queued) }} {{ _("of queued") }}</div></a>
+  <a class="card kpi" href="/calls?{{ qs(request, status='ivr') }}"><div class="muted small">{{ _("Left in IVR") }}</div><b>{{ k.ivr }}</b>
+    <div class="small muted">{{ _("avg in IVR") }} {{ k.avg_ivr|hms }}</div></a>
+  <div class="card kpi"><div class="muted small">{{ _("Wait for operator") }}</div><b>{{ k.avg_wait|hms }}</b>
+    <div class="small muted">{{ _("max") }} {{ k.max_wait|hms }} · SLA {{ pct(k.in_sla, k.answered) }}</div></div>
+  <div class="card kpi"><div class="muted small">{{ _("Talk time") }}</div><b>{{ k.sum_talk|hours }}</b>
+    <div class="small muted">{{ _("avg") }} {{ k.avg_talk|hms }}</div></div>
+  <a class="card kpi" href="/devices"><div class="muted small">{{ _("Phones online") }}</div><b>{{ online }}</b>
+    <div class="small muted">{{ _("of") }} {{ devices_total }} {{ _("known") }}</div></a>
+  <div class="card kpi"><div class="muted small">{{ _("Active channels") }}</div><b>{{ live|length }}</b>
+    <div class="small muted">{{ _("right now") }}</div></div>
+</div>
+
+<section class="card">
+  <h2>{{ _("Calls by time") }}</h2>
+  {{ chart|safe }}
+</section>
+
+{% if live or live_err %}
+<section class="card">
+  <h2>{{ _("Right now") }}</h2>
+  {% if live_err %}<p class="warn small">{{ _("AMI is not available") }}: {{ live_err }}</p>{% endif %}
+  <div class="scroll"><table class="tbl">
+    <thead><tr><th>{{ _("Channel") }}</th><th>{{ _("Caller") }}</th><th>{{ _("Where") }}</th><th>{{ _("State") }}</th><th>{{ _("Application") }}</th><th class="num">{{ _("Duration") }}</th></tr></thead>
+    <tbody>{% for c in live %}
+      <tr><td class="small"><a href="/call/{{ c.linkedid }}">{{ c.channel }}</a></td><td><code>{{ c.caller }}</code> <span class="muted small">{{ c.name }}</span></td>
+        <td class="small">{{ c.context }}{% if c.context and c.context.startswith('ivr9-') %} · {{ imap.node_title(c.context[5:]) }}{% endif %}</td>
+        <td>{{ c.state }}</td><td class="small">{{ c.app }} {{ c.data }}</td><td class="num">{{ c.dur }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Groups") }}</h2>
+    <table class="tbl">
+      <thead><tr><th>{{ _("Group") }}</th><th class="num">{{ _("Entered") }}</th><th class="num">{{ _("Answered") }}</th><th class="num">{{ _("Abandoned") }}</th><th class="num">{{ _("Avg wait") }}</th></tr></thead>
+      <tbody>{% for q in queues %}
+        <tr><td><a href="/queues?{{ qs(request, q=q.q) }}">{{ imap.queue_title(q.q) }}</a></td><td class="num">{{ q.entered }}</td><td class="num">{{ q.answered }}</td>
+          <td class="num">{{ q.abandoned }}</td><td class="num">{{ q.avg_wait|hms }}</td></tr>
+      {% else %}<tr><td colspan="5" class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>{{ _("Countries") }}</h2>
+    <table class="tbl">
+      <thead><tr><th>{{ _("Country") }}</th><th class="num">{{ _("Calls") }}</th><th class="num">{{ _("Answered") }}</th><th class="num">{{ _("Missed") }}</th></tr></thead>
+      <tbody>{% for r in top_countries %}
+        <tr><td><a href="/countries?{{ qs(request, cc=r.cc) }}">{{ r.cc|flag }} {{ r.cc|country }}</a></td><td class="num">{{ r.calls }}</td>
+          <td class="num">{{ r.answered }}</td><td class="num">{{ r.missed }}</td></tr>
+      {% else %}<tr><td colspan="4" class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+</div>
+
+<section class="card">
+  <h2>{{ _("Activity by weekday and hour") }}</h2>
+  {{ heat|safe }}
+</section>
+
+<section class="card">
+  <div class="head"><h2>{{ _("Latest calls") }}</h2><a href="/calls?{{ qs(request) }}">{{ _("all calls") }} →</a></div>
+  {{ calls_table(recent) }}
+</section>
+{% endblock %}
