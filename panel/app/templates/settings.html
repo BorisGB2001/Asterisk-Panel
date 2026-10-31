@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Settings") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Settings") }}</h1></div>
+<section class="card">
+  <h2>{{ _("Server") }}</h2>
+  <dl class="props">
+    <dt>Asterisk</dt><dd>{% if info.error %}<span class="error">AMI: {{ info.error }}</span>{% else %}{{ info.version }}{% endif %}</dd>
+    {% if info.uptime %}<dt>{{ _("Uptime") }}</dt><dd class="small">{{ info.uptime|replace("\n", " · ") }}</dd>{% endif %}
+    {% if info.calls %}<dt>{{ _("Right now") }}</dt><dd class="small">{{ info.calls|replace("\n", " · ") }}</dd>{% endif %}
+    <dt>{{ _("Panel address") }}</dt><dd><code>https://{{ env.panel_host }}:{{ env.panel_port }}</code> · TLS: {{ env.panel_tls }}
+      <span class="muted small">— {{ _("changed in /opt/asterisk-panel/.env (PANEL_HOST, PANEL_PORT, PANEL_TLS), then deploy/install.sh") }}</span></dd>
+    <dt>{{ _("Time zone") }}</dt><dd>{{ env.tz }} <span class="muted small">— TZ {{ _("in .env") }}</span></dd>
+    <dt>{{ _("Config files") }}</dt><dd><code>{{ env.asterisk_dir }}</code></dd>
+  </dl>
+  <div class="actions">
+    <form method="post" action="/settings/apply" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Apply to Asterisk again") }}</button></form>
+    <form method="post" action="/settings/restart" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger small-btn" data-confirm="{{ _('Asterisk will restart when there are no calls; phones re-register within a minute. Continue?') }}">{{ _("Restart Asterisk when there are no calls") }}</button></form>
+  </div>
+</section>
+
+<form method="post" action="/settings" autocomplete="off">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="settings-grid">
+  {% for key, title, opts in sections %}
+    <section class="card">
+      <h2>{{ _(title) }}</h2>
+      {% if key == "telegram" %}<p class="small">{% if tg_bot %}{{ _("Bot") }}: <a href="https://t.me/{{ tg_bot }}" rel="noopener noreferrer" target="_blank">@{{ tg_bot }}</a>
+        {% if tg_ok %}<span class="st st-online">{{ _("connected") }}</span>{% endif %}{% endif %}
+        {% if tg_error %}<span class="error">{{ tg_error }}</span>{% endif %}</p>{% endif %}
+      <div class="stack-fields">
+      {% for o in opts %}{% set v = values[o.key] %}
+        {% if o.kind == "bool" %}
+        <label class="check"><input type="checkbox" name="{{ o.key }}"{% if v %} checked{% endif %}> {{ _(o.label) }}</label>
+        {% else %}
+        <label>{{ _(o.label) }}{% if o.apply == "restart" %} <span class="badge">{{ _("restart") }}</span>{% endif %}
+          {% if o.kind == "choice" %}<select name="{{ o.key }}">{% for c in o.choices %}<option value="{{ c }}"{% if v == c %} selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+          {% elif o.kind == "list" %}<textarea name="{{ o.key }}" rows="3">{{ v|join("\n") }}</textarea>
+          {% elif o.kind == "secret" %}<input name="{{ o.key }}" type="password" placeholder="{{ _('set — leave empty to keep') if stored.get(o.key) else _('not set') }}" autocomplete="new-password">
+            {% if stored.get(o.key) %}<span class="small"><label class="check"><input type="checkbox" name="{{ o.key }}__clear"> {{ _("clear") }}</label></span>{% endif %}
+          {% elif o.kind == "int" %}<input name="{{ o.key }}" type="number" min="{{ o.lo }}" max="{{ o.hi }}" value="{{ v }}">
+          {% else %}<input name="{{ o.key }}" value="{{ v }}"{% if o.key == "panel_url" %} placeholder="{{ panel_url }}"{% endif %}>{% endif %}
+        </label>
+        {% endif %}
+        {% if o.help %}<p class="muted small opt-help">{{ _(o.help) }}</p>{% endif %}
+      {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+  </div>
+  <p><button type="submit">{{ _("Save and apply") }}</button>
+    <span class="muted small">{{ _("Asterisk is reloaded without interrupting calls. Settings marked “restart” take effect after an Asterisk restart.") }}</span></p>
+</form>
+
+<section class="card">
+  <h2>{{ _("Check e-mail") }}</h2>
+  <form method="post" action="/settings/test_email" class="row-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="to" type="email" required placeholder="{{ _('address') }}">
+    <button type="submit" class="secondary small-btn">{{ _("Send a test") }}</button>
+  </form>
+</section>
+
+<details class="card">
+  <summary>{{ _("Asterisk files written by the panel") }}</summary>
+  {% for name, text in files.items() %}
+  <h2>{{ name }}</h2>
+  {% if text is none %}<p class="error">{{ _("not written yet") }}</p>
+  {% else %}<pre class="conf">{{ text }}</pre>{% endif %}
+  {% endfor %}
+</details>
+{% endblock %}

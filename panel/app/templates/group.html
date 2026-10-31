@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ g.name }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ g.name }} <code class="muted small">q{{ g.id }}</code></h1><a href="/groups">← {{ _("all groups") }}</a>
+  <a href="/queues?q=q{{ g.id }}">{{ _("statistics") }}</a></div>
+{% include "tglink.html" %}
+<div class="grid2">
+  <section class="card">
+    <form method="post" action="/group/{{ g.id }}" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _("Name") }} <input name="name" value="{{ g.name }}" required maxlength="80"></label>
+      <label>{{ _("Number for direct calls") }} <input name="number" value="{{ g.number or '' }}" pattern="[0-9]{2,8}" maxlength="8" inputmode="numeric"></label>
+      <label>{{ _("Ring strategy") }} <select name="strategy">{% for k in STRATEGIES %}<option value="{{ k }}"{% if g.strategy == k %} selected{% endif %}>{{ _(STRATEGY_NAMES[k]) }}</option>{% endfor %}</select></label>
+      <label>{{ _("Ring, s") }} <input name="ring_sec" type="number" min="5" max="600" value="{{ g.ring_sec }}"></label>
+      <label>{{ _("Nobody answered") }} <select name="next_id"><option value="">{{ _("keep waiting in this group") }}</option>
+        {% for x in groups if x.id != g.id %}<option value="{{ x.id }}"{% if g.next_id == x.id %} selected{% endif %}>→ {{ x.name }}</option>{% endfor %}</select></label>
+      <fieldset><legend>{{ _("Members") }}</legend>
+        <p class="muted small">{{ _("The number sets the order for the “in list order” strategy.") }}</p>
+        <div class="members">{% for s in subs %}
+          <div class="row"><label class="check"><input type="checkbox" name="members" value="{{ s.ext }}"{% if s.ext in pos %} checked{% endif %}> <b>{{ s.ext }}</b> {{ s.name }}{% if not s.sip_enabled %} <span class="badge">{{ _("SIP off") }}</span>{% endif %}</label>
+            <input type="number" name="pos_{{ s.ext }}" min="1" max="999" value="{{ pos.get(s.ext, '') }}" aria-label="{{ _('order') }}"></div>
+        {% endfor %}</div>
+      </fieldset>
+      <label>{{ _("E-mail for missed calls of the group") }} <input name="notify_email" type="email" value="{{ g.notify_email or '' }}" maxlength="120"></label>
+      <button type="submit">{{ _("Save") }}</button>
+    </form>
+  </section>
+  <div>
+    <section class="card">
+      <h2>{{ _("Telegram chat of the group") }}</h2>
+      <p>{% if g.tg_chat_id %}{{ _("linked") }}: <b>{{ g.tg_title or g.tg_chat_id }}</b>{% else %}<span class="muted">{{ _("not linked") }}</span>{% endif %}</p>
+      <p class="muted small">{{ _("Missed calls of the group go to the chat. Make the link and choose the team chat in Telegram: the bot is added there.") }}</p>
+      <div class="actions">
+        <form method="post" action="/group/{{ g.id }}/tg_link" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Telegram link") }}</button></form>
+        {% if g.tg_chat_id %}<form method="post" action="/group/{{ g.id }}/tg_unlink" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Unlink Telegram") }}</button></form>{% endif %}
+        <form method="post" action="/group/{{ g.id }}/test" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Send a test") }}</button></form>
+      </div>
+      {% if sent %}<table class="tbl small">{% for n in sent %}<tr><td class="nowrap">{{ n.ts|dt("%d.%m %H:%M") }}</td><td>{{ n.channel }}</td>
+        <td>{% if n.linkedid %}<a href="/call/{{ n.linkedid }}">{{ _("call") }}</a>{% else %}{{ _("test") }}{% endif %}</td>
+        <td>{% if n.status == "sent" %}✓{% else %}<span class="error">{{ n.error }}</span>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+    </section>
+    <section class="card">
+      <h2>{{ _("IVR") }}</h2>
+      {% if refs %}<p>{{ _("The IVR sends calls here from") }}: {% for r in refs %}<code>{{ r }}</code> {{ imap.node_title(r) if r != "exit" else _("exit from IVR") }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+      <p class="muted small">{{ _("Such a group cannot be deleted.") }}</p>
+      {% else %}<p class="muted">{{ _("The IVR does not send calls to this group.") }}</p>
+      <form method="post" action="/group/{{ g.id }}/delete" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="danger small-btn" data-confirm="{{ _('Delete the group {name}?', name=g.name) }}">{{ _("Delete group") }}</button></form>{% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -59,7 +59,9 @@ class Conn:
                     return msg
                 continue
             k, _, v = line.partition(":")
-            msg[k.strip()] = v.strip()
+            k = k.strip()
+            # Command answers with one "Output:" header per line of text
+            msg[k] = msg[k] + "\n" + v.strip() if k == "Output" and k in msg else v.strip()
 
     def send(self, action: dict) -> dict:
         self.seq += 1
@@ -113,6 +115,30 @@ class AMI:
             return c.collect({"Action": "PJSIPShowContacts"}, "ContactList", "ContactListComplete")
         finally:
             c.close()
+
+    def action(self, action: dict) -> dict:
+        c = self._conn()
+        try:
+            resp = c.send(action)
+        finally:
+            c.close()
+        if resp.get("Response") != "Success":
+            raise AMIError(resp.get("Message", "action failed"))
+        return resp
+
+    def reload(self, module: str) -> None:
+        self.action({"Action": "Reload", "Module": module})
+
+    def command(self, cmd: str) -> str:
+        """CLI command (needs write=command for the AMI user); returns the output."""
+        c = self._conn(timeout=10)
+        try:
+            resp = c.send({"Action": "Command", "Command": cmd})
+        finally:
+            c.close()
+        if resp.get("Response") not in ("Success", "Follows"):
+            raise AMIError(resp.get("Message", "command failed"))
+        return resp.get("Output", "")
 
     def ping(self) -> bool:
         try:

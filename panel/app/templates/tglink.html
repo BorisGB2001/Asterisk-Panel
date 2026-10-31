@@ -1,0 +1,8 @@
+{# Telegram link just created: open it on the phone or scan the QR code #}
+{% if tg_url %}
+<div class="flash flash-ok">
+  <p>{{ _("Open the link in Telegram and press Start (for a group chat: choose the chat). The link works for one hour.") }}</p>
+  <p><a href="{{ tg_url }}" rel="noopener noreferrer" target="_blank"><code class="wrap">{{ tg_url }}</code></a></p>
+  <div class="qr">{{ tg_qr|safe }}</div>
+</div>
+{% endif %}

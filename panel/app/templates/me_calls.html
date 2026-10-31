@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "macros.html" import calls_table %}
+{% block title %}{{ _("My calls") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("My calls") }}</h1>{% include "period.html" %}</div>
+<form method="get" class="row-form filters">
+  {% for k in ("p", "from", "to") if request.query_params.get(k) %}<input type="hidden" name="{{ k }}" value="{{ request.query_params.get(k) }}">{% endfor %}
+  <input type="search" name="q" value="{{ filters.get('q', '') }}" placeholder="{{ _('number or name') }}">
+  <select name="status" data-autosubmit><option value="">{{ _("any result") }}</option>
+    {% for key, name in STATUS_NAMES.items() %}<option value="{{ key }}"{% if filters.get('status') == key %} selected{% endif %}>{{ _(name) }}</option>{% endfor %}</select>
+  <button type="submit" class="secondary small-btn">{{ _("Find") }}</button>
+  <span class="muted small">{{ total }}</span>
+</form>
+<section class="card">
+  {{ calls_table(rows, "/me/call/") }}
+  {% if pages > 1 %}<p class="pager">{% for n in range(1, pages + 1) %}{% if n == page %}<b>{{ n }}</b>{% else %}<a href="?{{ qs(request, page=n) }}">{{ n }}</a>{% endif %} {% endfor %}</p>{% endif %}
+</section>
+{% endblock %}

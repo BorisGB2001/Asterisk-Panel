@@ -11,17 +11,17 @@
 <body>
   {% if user %}
   <header class="top">
-    <a class="brand" href="/">{{ _("Asterisk panel") }}</a>
+    <a class="brand" href="{{ '/me' if sub else '/' }}">{{ _("Asterisk panel") }}</a>
     <nav class="menu">
-      {% for href, title, prefixes in MENU + ([("/admins", N_("Administrators"), ())] if admin and admin.role == "super" else []) %}
-      <a href="{{ href }}"{% if path == href or (prefixes and path.startswith(prefixes)) %} class="on" aria-current="page"{% endif %}>{{ _(title) }}</a>
+      {% for href, title, prefixes in (ME_MENU if sub else MENU + (SUPER_MENU if admin and admin.role == "super" else [])) %}
+      <a href="{{ href }}"{% if path == href or (prefixes and path.startswith(prefixes)) or (href != "/" and href != "/me" and path.startswith(href + "/")) %} class="on" aria-current="page"{% endif %}>{{ _(title) }}</a>
       {% endfor %}
     </nav>
     {% include "theme.html" %}
     {% include "lang.html" %}
     <form method="post" action="/logout" class="logout">
       <input type="hidden" name="csrf" value="{{ csrf }}">
-      <a href="/account" class="muted" title="{{ _("My account") }}">{{ user }}</a>
+      <a href="{{ '/me/profile' if sub else '/account' }}" class="muted" title="{{ _("My account") }}">{{ user }}</a>
       <button type="submit" class="link">{{ _("Sign out") }}</button>
     </form>
   </header>

@@ -48,7 +48,7 @@ def test_answered_in_queue():
     assert r["ivr_path"] == ["r", "r0"] and r["ivr_keys"] == ["r:0", "r0:4"]
     assert r["lang"] == "ru"
     assert r["queues"] == ["q3"] and r["answered_queue"] == "q3"
-    assert r["answered_by"] == "2204"
+    assert r["answered_by"] == "2204" and r["rung"] == ["2204"]
     assert (r["ivr_sec"], r["wait_sec"], r["talk_sec"], r["total_sec"]) == (19, 10, 60, 90)
     assert r["recording"].endswith(".wav")
 
@@ -63,6 +63,7 @@ def test_missed_with_cascade():
     assert r["queues"] == ["q3", "q11"]
     assert r["rings"] == 1
     assert r["wait_sec"] == 35
+    assert r["rung"] == ["2204"]
 
 
 def test_hung_up_in_ivr():
@@ -81,6 +82,7 @@ def test_internal_answered():
     assert r["direction"] == "internal" and r["source"] == "2204"
     assert r["status"] == "answered" and r["answered_by"] == "2203"
     assert (r["wait_sec"], r["talk_sec"]) == (5, 30)
+    assert r["rung"] == ["2203"]
 
 
 def test_user_defined_with_userdeftype():

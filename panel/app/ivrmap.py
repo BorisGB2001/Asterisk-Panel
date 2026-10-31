@@ -1,6 +1,7 @@
 """IVR map exported by the Asterisk config generator (ivr_map.json): node titles, keys, queues, staff.
 
 Reloaded automatically when the file changes. Missing file → empty map (panel shows raw node ids).
+Subscribers and groups managed in the panel (set_directory) take precedence over the file.
 """
 from __future__ import annotations
 
@@ -17,6 +18,11 @@ class IvrMap:
         self._mtime = None
         self._data: dict = {}
         self._lock = threading.Lock()
+        self._users: dict = {}
+        self._queues: dict = {}
+
+    def set_directory(self, users: dict, queues: dict) -> None:
+        self._users, self._queues = users, queues
 
     def data(self) -> dict:
         try:
@@ -38,11 +44,11 @@ class IvrMap:
 
     @property
     def queues(self) -> dict:
-        return self.data().get("queues", {})
+        return self._queues or self.data().get("queues", {})
 
     @property
     def users(self) -> dict:
-        return self.data().get("users", {})
+        return self._users or self.data().get("users", {})
 
     def node_title(self, path: str | None) -> str:
         if not path:
@@ -68,7 +74,13 @@ class IvrMap:
         """Queue member name (queue_log agent field) → extension."""
         if not name:
             return None
+        if name in self.users:
+            return name
         for ext, n in self.users.items():
+            if n == name:
+                return ext
+        # names from before the panel managed subscribers
+        for ext, n in self.data().get("users", {}).items():
             if n == name:
                 return ext
         return None

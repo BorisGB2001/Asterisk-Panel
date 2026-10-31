@@ -1,0 +1,5 @@
+{# a secret shown once (SIP or cabinet password) #}
+{% if show %}
+<div class="flash flash-ok">{{ show.title }}: <code class="secret">{{ show.value }}</code><br>
+  <span class="small">{{ show.note }}</span></div>
+{% endif %}

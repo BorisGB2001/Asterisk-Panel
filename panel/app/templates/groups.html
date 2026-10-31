@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Group setup") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Group setup") }}</h1><a href="/queues">{{ _("Group statistics") }} →</a></div>
+<section class="card">
+  <div class="scroll"><table class="tbl">
+    <thead><tr><th>{{ _("Group") }}</th><th>{{ _("Number") }}</th><th>{{ _("Ring strategy") }}</th><th class="num">{{ _("Ring, s") }}</th>
+      <th>{{ _("Nobody answered") }}</th><th>{{ _("Members") }}</th><th>{{ _("IVR") }}</th><th>{{ _("Notifications") }}</th></tr></thead>
+    <tbody>{% for g in rows %}
+      <tr><td><a href="/group/{{ g.id }}"><b>{{ g.name }}</b></a> <code class="muted small">q{{ g.id }}</code></td>
+        <td>{{ g.number or "—" }}</td><td class="small">{{ _(STRATEGY_NAMES.get(g.strategy, g.strategy)) }}</td><td class="num">{{ g.ring_sec }}</td>
+        <td class="small">{% if g.next_id %}→ <a href="/group/{{ g.next_id }}">{{ names.get(g.next_id, g.next_id) }}</a>{% else %}{{ _("keep waiting") }}{% endif %}</td>
+        <td class="small">{% for e in g.members %}{{ e }}{% if not loop.last %}, {% endif %}{% else %}<span class="error">{{ _("nobody") }}</span>{% endfor %}</td>
+        <td class="small">{% for r in refs[g.id] %}<code>{{ r }}</code> {% endfor %}</td>
+        <td class="small">{% if g.notify_email %}✉ {% endif %}{% if g.tg_chat_id %}Telegram{% endif %}</td></tr>
+    {% else %}<tr><td colspan="8" class="muted">{{ _("No groups yet.") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+<section class="card">
+  <h2>{{ _("New group") }}</h2>
+  <form method="post" action="/groups/add" class="row-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="name" placeholder="{{ _('name') }}" required maxlength="80">
+    <input name="number" placeholder="{{ _('number (optional)') }}" pattern="[0-9]{2,8}" maxlength="8" inputmode="numeric">
+    <select name="strategy">{% for k in STRATEGIES %}<option value="{{ k }}">{{ _(STRATEGY_NAMES[k]) }}</option>{% endfor %}</select>
+    <input name="ring_sec" type="number" min="5" max="600" value="{{ ring_default }}" aria-label="{{ _('Ring, s') }}">
+    <select name="next_id"><option value="">{{ _("keep waiting") }}</option>{% for g in rows %}<option value="{{ g.id }}">→ {{ g.name }}</option>{% endfor %}</select>
+    <button type="submit" class="small-btn">{{ _("Add") }}</button>
+  </form>
+  <p class="muted small">{{ _("Group q<id> in the IVR is reached through its menus; the number lets phones call the group directly. Members are chosen on the group page.") }}</p>
+</section>
+{% endblock %}

@@ -29,6 +29,13 @@ class Settings:
     ami_user: str = field(default_factory=lambda: os.environ.get("AMI_USER", "panel"))
     ami_secret: str = field(default_factory=lambda: os.environ.get("AMI_SECRET", ""))
 
+    # the panel writes its Asterisk config files here (included from the main files in asterisk_etc)
+    asterisk_etc: Path = field(default_factory=lambda: Path(os.environ.get("ASTERISK_ETC", "/etc/asterisk")))
+    asterisk_dir: Path = field(default_factory=lambda: Path(os.environ.get("ASTERISK_PANEL_DIR", "/etc/asterisk/panel")))
+    # PANEL_HOST / PANEL_PORT: the address of the panel, for links in notifications
+    panel_host: str = field(default_factory=lambda: os.environ.get("PANEL_HOST", ""))
+    panel_port: int = field(default_factory=lambda: _int("PANEL_PORT", 6443))
+    panel_tls: str = field(default_factory=lambda: os.environ.get("PANEL_TLS", "internal"))
     ivr_map: Path = field(default_factory=lambda: Path(os.environ.get("IVR_MAP", "/etc/asterisk/panel/ivr_map.json")))
     recordings_dir: Path = field(default_factory=lambda: Path(os.environ.get("RECORDINGS_DIR", "/var/spool/asterisk/monitor")))
     # country assumed for national numbers without a country code (8 495 ..., 495 ...)

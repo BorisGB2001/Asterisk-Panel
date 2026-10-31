@@ -6,7 +6,7 @@
   <h1>{{ _("Call") }} {{ c.start_at|dt }}</h1>
   {{ st(c.status) }}
   {% if c.in_progress %}<span class="st st-live">{{ _("in progress") }}</span>{% endif %}
-  <a href="/calls">← {{ _("all calls") }}</a>
+  {% if cab %}<a href="/me/calls">← {{ _("my calls") }}</a>{% else %}<a href="/calls">← {{ _("all calls") }}</a>{% endif %}
 </div>
 
 <div class="grid2">
@@ -16,7 +16,7 @@
       <dt>{{ _("Number") }}</dt><dd>{{ who_called(c) }}{% if c.caller_e164 %} <span class="muted small">{{ pretty(c.caller_e164) }}</span>{% endif %}</dd>
       <dt>{{ _("Country") }}</dt><dd>{{ c.caller_country|flag }} {{ c.caller_country|country }}{% if c.caller_region %} · {{ c.caller_region }}{% endif %}</dd>
       {% if c.caller_carrier %}<dt>{{ _("Carrier") }}</dt><dd>{{ c.caller_carrier }}</dd>{% endif %}
-      <dt>{{ _("Came via") }}</dt><dd>{% if c.source == 'trunk' %}{{ _("SIP trunk") }}{% elif c.source == 'local' %}{{ _("test call (Local channel)") }}{% else %}{{ _("phone") }} <a href="/device/{{ c.source }}">{{ imap.user_title(c.source) }}</a>{% endif %}</dd>
+      <dt>{{ _("Came via") }}</dt><dd>{% if c.source == 'trunk' %}{{ _("SIP trunk") }}{% elif c.source == 'local' %}{{ _("test call (Local channel)") }}{% else %}{{ _("phone") }} {% if cab %}{{ imap.user_title(c.source) }}{% else %}<a href="/device/{{ c.source }}">{{ imap.user_title(c.source) }}</a>{% endif %}{% endif %}</dd>
       {% if c.device_ip %}<dt>{{ _("Phone registered from") }}</dt><dd><code>{{ c.device_ip }}</code> {{ c.device_country|flag }} {{ c.device_country|country if c.device_country else "" }}</dd>{% endif %}
       <dt>{{ _("Number dialled") }}</dt><dd>{{ c.did or c.dst or "—" }}</dd>
       <dt>{{ _("Direction") }}</dt><dd>{{ _(DIRECTION_NAMES.get(c.direction, c.direction)) }}{% if c.lang %} · {{ _("IVR language") }}: {{ c.lang|upper }}{% endif %}</dd>
@@ -29,16 +29,17 @@
       <dt>{{ _("End") }}</dt><dd>{{ c.end_at|dt if c.end_at else "—" }}</dd>
       <dt>{{ _("Total") }}</dt><dd>{{ c.total_sec|hms }}</dd>
       {% if c.ivr_sec %}<dt>{{ _("In IVR") }}</dt><dd>{{ c.ivr_sec|hms }}</dd>{% endif %}
-      {% if c.queues %}<dt>{{ _("Groups") }}</dt><dd>{% for q in c.queues %}<a href="/queues?q={{ q }}">{{ imap.queue_title(q) }}</a>{% if not loop.last %} → {% endif %}{% endfor %}</dd>
+      {% if c.queues %}<dt>{{ _("Groups") }}</dt><dd>{% for q in c.queues %}{% if cab %}{{ imap.queue_title(q) }}{% else %}<a href="/queues?q={{ q }}">{{ imap.queue_title(q) }}</a>{% endif %}{% if not loop.last %} → {% endif %}{% endfor %}</dd>
       <dt>{{ _("Waited for operator") }}</dt><dd>{{ c.wait_sec|hms }}{% if c.rings %} · {{ _("unanswered rings") }}: {{ c.rings }}{% endif %}</dd>{% endif %}
-      {% if c.answered_by %}<dt>{{ _("Answered by") }}</dt><dd><a href="/device/{{ c.answered_by }}">{{ imap.user_title(c.answered_by) }}</a>{% if c.answered_queue %} · {{ imap.queue_title(c.answered_queue) }}{% endif %}</dd>
+      {% if c.answered_by %}<dt>{{ _("Answered by") }}</dt><dd>{% if cab %}{{ imap.user_title(c.answered_by) }}{% else %}<a href="/device/{{ c.answered_by }}">{{ imap.user_title(c.answered_by) }}</a>{% endif %}{% if c.answered_queue %} · {{ imap.queue_title(c.answered_queue) }}{% endif %}</dd>
       <dt>{{ _("Talk") }}</dt><dd>{{ c.talk_sec|hms }}</dd>{% endif %}
       <dt>{{ _("Call id") }}</dt><dd><code class="small">{{ c.linkedid }}</code></dd>
     </dl>
     {% if has_rec %}
     <h2>{{ _("Recording") }}</h2>
-    <audio controls preload="none" src="/call/{{ c.linkedid }}/recording" class="player"></audio>
-    <p class="small"><a href="/call/{{ c.linkedid }}/recording?download=1">{{ _("download") }}</a></p>
+    {% set base = "/me/call/" if cab else "/call/" %}
+    <audio controls preload="none" src="{{ base }}{{ c.linkedid }}/recording" class="player"></audio>
+    <p class="small"><a href="{{ base }}{{ c.linkedid }}/recording?download=1">{{ _("download") }}</a></p>
     {% elif c.recording %}<p class="muted small">{{ _("Recording file not found") }}: {{ c.recording }}</p>{% endif %}
   </section>
 </div>
@@ -46,7 +47,7 @@
 {% if c.ivr_path %}
 <section class="card">
   <h2>{{ _("Path through the IVR") }}</h2>
-  <p class="path big">{% for n in c.ivr_path %}<a class="node" href="/calls?node={{ n }}">{{ imap.node_title(n) }}</a>{% if not loop.last %} › {% endif %}{% endfor %}
+  <p class="path big">{% for n in c.ivr_path %}{% if cab %}<span class="node">{{ imap.node_title(n) }}</span>{% else %}<a class="node" href="/calls?node={{ n }}">{{ imap.node_title(n) }}</a>{% endif %}{% if not loop.last %} › {% endif %}{% endfor %}
     {% if c.queues %} › <b>{{ imap.queue_title(c.queues[-1]) }}</b>{% endif %}</p>
   {% if c.ivr_keys %}<p class="small muted">{{ _("Keys") }}: {% for k in c.ivr_keys %}<code>{{ k.split(':')[1:]|join(':') }}</code> {% endfor %}</p>{% endif %}
 </section>
@@ -65,6 +66,7 @@
   </ol>
 </section>
 
+{% if not cab %}
 <details class="card">
   <summary>{{ _("Call log (raw Asterisk events)") }}: CEL {{ cel|length }}, queue_log {{ qlog|length }}, CDR {{ cdr|length }}</summary>
   <h2>CEL</h2>
@@ -89,4 +91,5 @@
       <td class="num">{{ r.duration }} / {{ r.billsec }}</td></tr>{% endfor %}</tbody>
   </table></div>{% endif %}
 </details>
+{% endif %}
 {% endblock %}

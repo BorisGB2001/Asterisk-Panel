@@ -78,6 +78,9 @@ def where(p: Period, f: dict | None = None) -> tuple[str, list]:
     if f.get("agent"):
         sql.append("answered_by = %s")
         args.append(f["agent"])
+    if f.get("me"):          # personal cabinet: calls the subscriber took part in
+        sql.append("(answered_by = %s OR source = %s OR dst = %s OR %s = ANY(rung))")
+        args += [f["me"]] * 4
     if f.get("node"):
         sql.append("%s = ANY(ivr_path)")
         args.append(f["node"])
@@ -120,7 +123,10 @@ def series(db, p: Period, f: dict | None = None) -> list[tuple[str, list[float]]
                count(*) FILTER (WHERE status = 'missed') mis,
                count(*) FILTER (WHERE status IN ('ivr', 'unanswered')) other
         FROM calls WHERE {w} GROUP BY 1""", (p.bucket, str(TZ), *a))
-    got = {r["b"]: [r["ans"], r["mis"], r["other"]] for r in rows}
+    return _fill(p, {r["b"]: [r["ans"], r["mis"], r["other"]] for r in rows})
+
+
+def _fill(p: Period, got: dict) -> list[tuple[str, list[float]]]:
     out = []
     cur = p.since.astimezone(TZ).replace(tzinfo=None)
     end = p.until.astimezone(TZ).replace(tzinfo=None)
@@ -244,3 +250,31 @@ def calls(db, p: Period, f: dict, limit: int = 100, offset: int = 0) -> tuple[li
     total = db.val(f"SELECT count(*) FROM calls WHERE {w}", a)
     rows = db.all(f"SELECT * FROM calls WHERE {w} ORDER BY start_at DESC LIMIT %s OFFSET %s", (*a, limit, offset))
     return rows, total
+
+
+def sub_kpis(db, p: Period, ext: str) -> dict:
+    """Personal cabinet: what happened to the subscriber's calls in the period."""
+    w, a = where(p, {"me": ext})
+    return db.one(f"""
+        SELECT count(*) total,
+               count(*) FILTER (WHERE answered_by = %s) answered,
+               count(*) FILTER (WHERE %s = ANY(rung) AND answered_by IS DISTINCT FROM %s AND source IS DISTINCT FROM %s) rung_not_me,
+               count(*) FILTER (WHERE %s = ANY(rung) AND status <> 'answered' AND source IS DISTINCT FROM %s) missed,
+               count(*) FILTER (WHERE source = %s) outgoing,
+               count(*) FILTER (WHERE source = %s AND status = 'answered') outgoing_answered,
+               coalesce(sum(talk_sec) FILTER (WHERE answered_by = %s OR (source = %s AND status = 'answered')), 0) talk,
+               coalesce(avg(talk_sec) FILTER (WHERE answered_by = %s), 0)::int avg_talk,
+               coalesce(avg(wait_sec) FILTER (WHERE answered_by = %s AND first_queue IS NOT NULL), 0)::int avg_wait
+        FROM calls WHERE {w}""", (ext, ext, ext, ext, ext, ext, ext, ext, ext, ext, ext, ext, *a))
+
+
+def sub_series(db, p: Period, ext: str) -> list[tuple[str, list[float]]]:
+    """Per hour/day: answered by the subscriber, missed (rang the subscriber, nobody answered), outgoing."""
+    w, a = where(p, {"me": ext})
+    rows = db.all(f"""
+        SELECT date_trunc(%s, start_at AT TIME ZONE %s) b,
+               count(*) FILTER (WHERE answered_by = %s) s1,
+               count(*) FILTER (WHERE %s = ANY(rung) AND status <> 'answered' AND source IS DISTINCT FROM %s) s2,
+               count(*) FILTER (WHERE source = %s) s3
+        FROM calls WHERE {w} GROUP BY 1""", (p.bucket, str(TZ), ext, ext, ext, ext, *a))
+    return _fill(p, {r["b"]: [r["s1"], r["s2"], r["s3"]] for r in rows})

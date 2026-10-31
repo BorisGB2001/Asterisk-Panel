@@ -1,4 +1,4 @@
-// Table sorting, auto-submit filters, auto refresh of the overview (CSP: own scripts only, no inline handlers).
+// Table sorting, auto-submit filters, confirmations, auto refresh of the overview (CSP: own scripts only, no inline handlers).
 (function () {
   document.querySelectorAll("table.sortable").forEach((table) => {
     const body = table.tBodies[0];
@@ -22,6 +22,9 @@
     });
   });
   document.querySelectorAll("select[data-autosubmit]").forEach((s) => s.addEventListener("change", () => s.form.submit()));
+  document.querySelectorAll("[data-confirm]").forEach((b) => b.addEventListener("click", (e) => {
+    if (!confirm(b.dataset.confirm)) e.preventDefault();
+  }));
   const live = document.querySelector("[data-refresh]");
   if (live) {
     let busy = Date.now();

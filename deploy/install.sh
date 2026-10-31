@@ -20,6 +20,13 @@ id astpanel >/dev/null 2>&1 || useradd -r -d "$APP" -s /usr/sbin/nologin astpane
 getent group asterisk >/dev/null && usermod -aG asterisk astpanel
 mkdir -p "$APP/data"
 chown -R astpanel:astpanel "$APP/data"
+# boris.gb 2026-10-31 15:37 - the panel writes its Asterisk config files here (subscribers, groups, settings);
+# Asterisk reads them through its group: setgid keeps new files in group asterisk
+if getent group asterisk >/dev/null; then
+  mkdir -p /etc/asterisk/panel
+  chown astpanel:asterisk /etc/asterisk/panel
+  chmod 2750 /etc/asterisk/panel
+fi
 
 # --- PostgreSQL: database asterisk; role asterisk writes cdr/cel/queue_log, role panel reads them and owns schema panel ---
 psql_su() { su - postgres -c "psql -v ON_ERROR_STOP=1 -qtAX $*"; }
@@ -76,6 +83,13 @@ chmod 640 .env
 sed -e "s|__HOST__|$PANEL_HOST|g" -e "s|__PORT__|$PANEL_PORT|g" -e "s|__TLS__|${PANEL_TLS:-internal}|g" \
   "$APP/deploy/Caddyfile.in" > /etc/caddy/Caddyfile
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || { caddy validate --config /etc/caddy/Caddyfile; exit 1; }
+
+# --- Asterisk config files of the panel (boris.gb 2026-10-31 15:37) ---
+# first run: subscribers and groups are taken over from the current pjsip.conf / ivr_map.json; files are written,
+# Asterisk starts using them once its main files include them (see deploy/asterisk-examples)
+if [ -d /etc/asterisk/panel ]; then
+  ( cd "$APP/panel" && set -a && . ../.env && set +a && runuser -u astpanel --preserve-environment -- ../venv/bin/python -m app.provision init )
+fi
 
 # --- service ---
 install -m 644 "$APP/deploy/asterisk-panel.service" /etc/systemd/system/asterisk-panel.service

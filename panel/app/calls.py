@@ -153,6 +153,15 @@ def summarize(cel: list[dict], qlog: list[dict], cdr: list[dict], users: dict, n
             status = "unanswered"
             wait_sec = int((end - start).total_seconds())
 
+    rung: list[str] = []
+    for r in qlog:
+        if r["event"] in ("RINGNOANSWER", "CONNECT") and r["agent"] and r["agent"] != "NONE":
+            rung.append(name_to_ext.get(r["agent"]) or r["agent"])
+    for r in cel:
+        if r["eventtype"] == "CHAN_START" and r["uniqueid"] != orig_uid and not is_local(r["channame"]):
+            rung.append(endpoint(r["channame"]))
+    rung = [e for i, e in enumerate(rung) if e and e not in rung[:i]]
+
     return {
         "linkedid": cel[0]["linkedid"],
         "start_at": start,
@@ -179,6 +188,7 @@ def summarize(cel: list[dict], qlog: list[dict], cdr: list[dict], users: dict, n
         "rings": rings,
         "recording": recording,
         "uniqueids": sorted({r["uniqueid"] for r in cel if r["uniqueid"]}),
+        "rung": rung,
     }
 
 
@@ -312,7 +322,7 @@ ORDER BY c.id LIMIT 200
 UPSERT_COLS = ("linkedid", "start_at", "end_at", "direction", "source", "caller_num", "caller_name", "caller_e164",
                "caller_country", "caller_region", "caller_carrier", "device_ip", "device_country", "did", "dst", "lang",
                "status", "answered_by", "answered_queue", "first_queue", "queues", "ivr_path", "ivr_keys", "last_node",
-               "ivr_sec", "wait_sec", "talk_sec", "total_sec", "rings", "recording", "uniqueids")
+               "ivr_sec", "wait_sec", "talk_sec", "total_sec", "rings", "recording", "uniqueids", "rung")
 
 
 def raw(db, linkedid: str) -> tuple[list[dict], list[dict], list[dict]]:

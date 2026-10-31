@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ s.ext }} {{ s.name }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ s.ext }} · {{ s.name }}</h1><a href="/subscribers">← {{ _("all subscribers") }}</a></div>
+{% include "once.html" %}
+{% include "tglink.html" %}
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("Profile") }}</h2>
+    <form method="post" action="/subscriber/{{ s.ext }}" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _("Name (shown as caller id)") }} <input name="name" value="{{ s.name }}" maxlength="60" required></label>
+      <label>{{ _("E-mail") }} <input name="email" type="email" value="{{ s.email or '' }}" maxlength="120"></label>
+      <label>Telegram <input name="telegram" value="{{ s.telegram or '' }}" placeholder="@username" maxlength="33"></label>
+      <label>{{ _("Language of messages") }} <select name="lang"><option value="">{{ _("default") }}</option>
+        {% for code, name in languages() %}<option value="{{ code }}"{% if s.lang == code %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+      <fieldset><legend>{{ _("Notify about missed calls") }}</legend>
+        <label class="check"><input type="checkbox" name="notify_direct"{% if s.notify_direct %} checked{% endif %}> {{ _("to my extension") }}</label>
+        <label class="check"><input type="checkbox" name="notify_group"{% if s.notify_group %} checked{% endif %}> {{ _("in my groups, when the call rang me") }}</label>
+        <label class="check"><input type="checkbox" name="notify_email"{% if s.notify_email %} checked{% endif %}> {{ _("by e-mail") }}</label>
+        <label class="check"><input type="checkbox" name="notify_telegram"{% if s.notify_telegram %} checked{% endif %}> {{ _("in Telegram") }}</label>
+      </fieldset>
+      <fieldset><legend>{{ _("Groups") }}</legend>
+        {% for g in groups %}<label class="check"><input type="checkbox" name="groups" value="{{ g.id }}"{% if g.id in s.groups %} checked{% endif %}> {{ g.name }} <span class="muted small">{{ g.number or "" }}</span></label>
+        {% else %}<p class="muted small">{{ _("No groups.") }}</p>{% endfor %}
+      </fieldset>
+      <fieldset><legend>SIP</legend>
+        <label class="check"><input type="checkbox" name="sip_enabled"{% if s.sip_enabled %} checked{% endif %}> {{ _("account enabled (the phone may register and call)") }}</label>
+        <label>{{ _("Devices per account") }} <input name="max_contacts" type="number" min="1" max="10" value="{{ s.max_contacts }}"></label>
+      </fieldset>
+      <button type="submit">{{ _("Save") }}</button>
+    </form>
+  </section>
+  <div>
+    <section class="card">
+      <h2>{{ _("Phone") }}</h2>
+      <dl class="props">
+        <dt>{{ _("SIP login") }}</dt><dd><code>{{ s.ext }}</code></dd>
+        <dt>{{ _("Status") }}</dt><dd>{% if dev and dev.status not in ("Removed",) %}{{ dev.status }} · <code>{{ dev.ip }}</code> {{ dev.country|flag }} {{ dev.country|country if dev.country else "" }}{% if dev.user_agent %} · {{ dev.user_agent }}{% endif %}{% else %}<span class="muted">{{ _("not registered") }}</span>{% endif %}</dd>
+        <dt>{{ _("SIP password") }}</dt><dd>{{ _("set") if s.sip_digest else _("not set") }}</dd>
+      </dl>
+      <div class="actions">
+        <form method="post" action="/subscriber/{{ s.ext }}/sip_password" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn" data-confirm="{{ _('The phone will need the new password. Continue?') }}">{{ _("New SIP password") }}</button></form>
+        <a class="btn secondary small-btn" href="/device/{{ s.ext }}">{{ _("Registration history") }}</a>
+        <a class="btn secondary small-btn" href="/calls?q={{ s.ext }}">{{ _("Calls") }}</a>
+      </div>
+    </section>
+    <section class="card">
+      <h2>{{ _("Personal cabinet") }}</h2>
+      {% if s.web_enabled %}
+      <p>{{ _("Access is on.") }} {% if s.totp_secret %}{{ _("Authenticator set up.") }}{% else %}{{ _("Not signed in yet.") }}{% endif %}
+        {% if s.last_login_at %}<span class="muted small">{{ _("Last sign-in") }}: {{ s.last_login_at|dt }} <code>{{ s.last_login_ip }}</code></span>{% endif %}</p>
+      <div class="actions">
+        <form method="post" action="/subscriber/{{ s.ext }}/web_grant" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Reset password") }}</button></form>
+        <form method="post" action="/subscriber/{{ s.ext }}/web_revoke" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Disable") }}</button></form>
+      </div>
+      {% else %}
+      <p class="muted">{{ _("The subscriber cannot sign in to the cabinet.") }}</p>
+      <form method="post" action="/subscriber/{{ s.ext }}/web_grant" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="small-btn">{{ _("Give access") }}</button></form>
+      {% endif %}
+    </section>
+    <section class="card">
+      <h2>{{ _("Notifications") }}</h2>
+      <p>Telegram: {% if s.tg_chat_id %}{{ _("linked") }} {{ s.telegram or "" }} <span class="muted small">{{ s.tg_linked_at|dt if s.tg_linked_at else "" }}</span>{% else %}<span class="muted">{{ _("not linked") }}</span>{% endif %}</p>
+      <div class="actions">
+        <form method="post" action="/subscriber/{{ s.ext }}/tg_link" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Telegram link") }}</button></form>
+        {% if s.tg_chat_id %}<form method="post" action="/subscriber/{{ s.ext }}/tg_unlink" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Unlink Telegram") }}</button></form>{% endif %}
+        <form method="post" action="/subscriber/{{ s.ext }}/test" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="secondary small-btn">{{ _("Send a test") }}</button></form>
+      </div>
+      {% if sent %}<table class="tbl small">{% for n in sent %}<tr><td class="nowrap">{{ n.ts|dt("%d.%m %H:%M") }}</td><td>{{ n.channel }}</td>
+        <td>{% if n.linkedid %}<a href="/call/{{ n.linkedid }}">{{ _("call") }}</a>{% else %}{{ _("test") }}{% endif %}</td>
+        <td>{% if n.status == "sent" %}✓{% else %}<span class="error">{{ n.error }}</span>{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+    </section>
+    <section class="card">
+      <form method="post" action="/subscriber/{{ s.ext }}/delete" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="danger small-btn" data-confirm="{{ _('Delete subscriber {ext}? The phone will stop working. Call history is kept.', ext=s.ext) }}">{{ _("Delete subscriber") }}</button></form>
+    </section>
+  </div>
+</div>
+{% endblock %}

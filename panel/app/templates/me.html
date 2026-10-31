@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "macros.html" import calls_table %}
+{% block title %}{{ _("My statistics") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ me.ext }} · {{ me.name }}</h1>{% include "period.html" %}</div>
+
+<div class="kpis compact">
+  <a class="card kpi" href="/me/calls?{{ qs(request) }}"><div class="muted small">{{ _("My calls") }}</div><b>{{ k.total }}</b>
+    <div class="small muted">{{ _("outgoing") }} {{ k.outgoing }}</div></a>
+  <div class="card kpi"><div class="muted small">{{ _("Answered by me") }}</div><b>{{ k.answered }}</b>
+    <div class="small muted">{{ _("avg wait of the caller") }} {{ k.avg_wait|hms }}</div></div>
+  <a class="card kpi" href="/me/calls?{{ qs(request, status='missed') }}"><div class="muted small">{{ _("Missed") }}</div><b class="{{ 'bad' if k.missed }}">{{ k.missed }}</b>
+    <div class="small muted">{{ _("rang me, nobody answered") }}</div></a>
+  <div class="card kpi"><div class="muted small">{{ _("Taken by colleagues") }}</div><b>{{ k.rung_not_me }}</b>
+    <div class="small muted">{{ _("rang me, another operator answered") }}</div></div>
+  <div class="card kpi"><div class="muted small">{{ _("Talk time") }}</div><b>{{ k.talk|hours }}</b>
+    <div class="small muted">{{ _("avg") }} {{ k.avg_talk|hms }}</div></div>
+  <div class="card kpi"><div class="muted small">{{ _("Phone") }}</div>
+    {% if dev and dev.status not in ("Removed",) %}<b class="small">{{ dev.status }}</b><div class="small muted"><code>{{ dev.ip }}</code> {{ dev.country|flag }}</div>
+    {% else %}<b class="small">{{ _("not registered") }}</b>{% endif %}</div>
+</div>
+
+<section class="card">
+  <h2>{{ _("By time") }}</h2>
+  {{ chart|safe }}
+</section>
+
+<section class="card">
+  <h2>{{ _("Latest calls") }}</h2>
+  {{ calls_table(recent, "/me/call/") }}
+  <p><a href="/me/calls?{{ qs(request) }}">{{ _("all my calls") }} →</a></p>
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>{{ _("My groups") }}</h2>
+    {% for g in me.groups %}<p>{{ imap.queue_title("q" ~ g) }}</p>{% else %}<p class="muted">{{ _("No groups.") }}</p>{% endfor %}
+  </section>
+  <section class="card">
+    <h2>{{ _("Where my phone connected from") }}</h2>
+    <table class="tbl small">{% for r in ips %}<tr><td><code>{{ r.ip }}</code></td><td>{{ r.cc|flag }} {{ r.cc|country if r.cc else "" }}{% if r.city %} · {{ r.city }}{% endif %}</td><td class="nowrap">{{ r.last|dt("%d.%m %H:%M") }}</td></tr>
+    {% else %}<tr><td class="muted">{{ _("No data.") }}</td></tr>{% endfor %}</table>
+  </section>
+</div>
+{% endblock %}

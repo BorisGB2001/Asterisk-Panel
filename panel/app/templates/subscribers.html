@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Subscribers") }} — {{ _("Asterisk panel") }}{% endblock %}
+{% block content %}
+<div class="head"><h1>{{ _("Subscribers") }}</h1><span class="muted small">{{ rows|length }}</span></div>
+{% include "once.html" %}
+<section class="card">
+  <div class="scroll"><table class="tbl sortable">
+    <thead><tr><th>{{ _("Extension") }}</th><th>{{ _("Name") }}</th><th>{{ _("Groups") }}</th><th>{{ _("Phone") }}</th>
+      <th>{{ _("E-mail") }}</th><th>Telegram</th><th>{{ _("Cabinet") }}</th></tr></thead>
+    <tbody>{% for s in rows %}{% set d = devs.get(s.ext) %}
+      <tr{% if not s.sip_enabled %} class="off"{% endif %}>
+        <td><a href="/subscriber/{{ s.ext }}"><b>{{ s.ext }}</b></a></td>
+        <td>{{ s.name }}</td>
+        <td class="small">{% for g in s.groups %}{% for x in groups if x.id == g %}<a href="/group/{{ g }}">{{ x.name }}</a>{% endfor %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td class="small">{% if not s.sip_enabled %}<span class="st st-disabled">{{ _("SIP off") }}</span>
+          {% elif d and d.status not in ("Removed", "Unreachable") %}<span class="st st-online">{{ _("online") }}</span> <code>{{ d.ip }}</code> {{ d.country|flag }}
+          {% elif d and d.status == "Unreachable" %}<span class="st st-missed">{{ _("unreachable") }}</span>
+          {% else %}<span class="muted">{{ _("not registered") }}</span>{% endif %}</td>
+        <td class="small">{{ s.email or "" }}</td>
+        <td class="small">{% if s.tg_chat_id %}✓ {% endif %}{{ s.telegram or "" }}</td>
+        <td class="small">{% if s.web_enabled %}{{ _("yes") }}{% if not s.totp_secret %} · {{ _("not signed in yet") }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="muted">{{ _("No subscribers yet.") }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+<section class="card">
+  <h2>{{ _("New subscriber") }}</h2>
+  <form method="post" action="/subscribers/add" class="row-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="ext" placeholder="{{ _('extension, e.g. 2230') }}" required pattern="[0-9]{2,8}" maxlength="8" inputmode="numeric">
+    <input name="name" placeholder="{{ _('name') }}" maxlength="60">
+    <input name="email" type="email" placeholder="{{ _('e-mail (optional)') }}" maxlength="120">
+    <button type="submit" class="small-btn">{{ _("Add") }}</button>
+  </form>
+  {% if groups %}<p class="muted small">{{ _("Groups are chosen on the subscriber page after adding.") }}</p>{% endif %}
+  <p class="muted small">{{ _("A SIP password is generated and shown once. Asterisk is updated at once, calls in progress are not interrupted.") }}</p>
+</section>
+{% endblock %}

@@ -4,14 +4,14 @@
 
 {% macro path(c) %}{% if c.ivr_path %}<span class="path">{% for n in c.ivr_path %}<span class="node" title="{{ n }}">{{ imap.node_title(n) }}</span>{% if not loop.last %} › {% endif %}{% endfor %}</span>{% elif c.dst %}<span class="muted">→ {{ c.dst }}</span>{% endif %}{% endmacro %}
 
-{% macro calls_table(rows) %}
+{% macro calls_table(rows, prefix="/call/") %}
 <div class="scroll"><table class="tbl sortable">
   <thead><tr><th>{{ _("Time") }}</th><th>{{ _("Caller") }}</th><th>{{ _("Path") }}</th><th>{{ _("Group") }}</th><th>{{ _("Answered by") }}</th>
     <th class="num">{{ _("Wait") }}</th><th class="num">{{ _("Talk") }}</th><th>{{ _("Result") }}</th></tr></thead>
   <tbody>
   {% for c in rows %}
   <tr>
-    <td class="nowrap" data-v="{{ c.start_at.timestamp()|int }}"><a href="/call/{{ c.linkedid }}">{{ c.start_at|dt("%d.%m %H:%M:%S") }}</a></td>
+    <td class="nowrap" data-v="{{ c.start_at.timestamp()|int }}"><a href="{{ prefix }}{{ c.linkedid }}">{{ c.start_at|dt("%d.%m %H:%M:%S") }}</a></td>
     <td>{{ who_called(c) }}</td>
     <td class="small">{{ path(c) }}</td>
     <td class="small">{% for q in c.queues %}{{ imap.queue_title(q) }}{% if not loop.last %} → {% endif %}{% endfor %}</td>
